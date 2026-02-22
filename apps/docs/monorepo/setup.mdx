@@ -1,0 +1,149 @@
+---
+title: "Setup Local"
+description: "Como configurar o ambiente de desenvolvimento local do monorepo EasyGoal."
+---
+
+## Pré-requisitos
+
+- Node.js v19+
+- npm v9+ (ou yarn/pnpm)
+- Git
+
+## Instalação
+
+```bash
+# Clonar o repositório
+git clone https://github.com/easygoal/monorepo.git
+cd easygoal-monorepo
+
+# Instalar todas as dependências de todos os apps e packages
+npm install
+```
+
+O workspaces do npm instala as dependências de todos os projetos automaticamente — sem necessidade de entrar em cada pasta.
+
+## Variáveis de ambiente
+
+Copie o arquivo de exemplo e preencha com seus valores:
+
+```bash
+cp .env.example .env.local
+```
+
+<Warning>
+Nunca commite arquivos `.env.local` ou `.env` com secrets reais. Use `.env.example` apenas com valores de placeholder.
+</Warning>
+
+## Rodar em desenvolvimento
+
+```bash
+# Rodar todos os apps em paralelo (app-front, sso, club-lp, docs)
+npm run dev
+
+# Rodar apenas um app específico
+npx turbo dev --filter=sso
+npx turbo dev --filter=club-lp
+npx turbo dev --filter=docs
+```
+
+Por padrão:
+- `app-front` → `http://localhost:3000`
+- `sso` → `http://localhost:3001`
+- `club-lp` → `http://localhost:3002`
+- `docs` → `http://localhost:3003`
+
+## Integração Multistack e Webhooks
+
+Para aceitar integração de webhooks em múltiplas linguagens, o SSO deve expor o endpoint `POST /api/webhook/payment` de forma agnóstica à linguagem do cliente.
+
+<Tabs>
+  <Tab title="Node.js">
+    ```ts
+    import { createHmac, timingSafeEqual } from 'crypto';
+
+    function verifyWebhook(rawBody: string, signature: string, secret: string): boolean {
+      const expected = createHmac('sha256', secret)
+        .update(rawBody)
+        .digest('hex');
+
+      const sigBuf = Buffer.from(signature, 'hex');
+      const expBuf = Buffer.from(expected, 'hex');
+
+      return sigBuf.length === expBuf.length && timingSafeEqual(sigBuf, expBuf);
+    }
+    ```
+  </Tab>
+  <Tab title="Python">
+    ```python
+    import hmac
+    import hashlib
+
+    def verify_webhook(raw_body: str, signature: str, secret: str) -> bool:
+        expected = hmac.new(
+            secret.encode(),
+            raw_body.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(signature, expected)
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```go
+    import (
+        "crypto/hmac"
+        "crypto/sha256"
+        "encoding/hex"
+    )
+
+    func verifyWebhook(rawBody, signature, secret string) bool {
+        mac := hmac.New(sha256.New, []byte(secret))
+        mac.Write([]byte(rawBody))
+        expected := hex.EncodeToString(mac.Sum(nil))
+        return hmac.Equal([]byte(signature), []byte(expected))
+    }
+    ```
+  </Tab>
+  <Tab title="PHP">
+    ```php
+    function verifyWebhook(string $rawBody, string $signature, string $secret): bool {
+        $expected = hash_hmac('sha256', $rawBody, $secret);
+        return hash_equals($expected, $signature);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Build e Deploy
+
+```bash
+# Build de todos os projetos
+npm run build
+
+# Lint e type-check
+npm run lint
+npm run type-check
+```
+
+<Note>
+A ordem de build é gerenciada automaticamente pelo Turborepo com base nas dependências entre pacotes. `packages/*` é construído antes dos `apps/*`.
+</Note>
+
+## Estrutura do turbo.json
+
+```json
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {},
+    "type-check": {}
+  }
+}
+```

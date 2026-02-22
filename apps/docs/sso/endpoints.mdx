@@ -1,0 +1,189 @@
+---
+title: "Endpoints do SSO"
+description: "Referência de todos os endpoints expostos pelo serviço de autenticação EasyGoal."
+---
+
+## GET /auth/login
+
+Inicia o fluxo de autenticação. Valida `redirect_uri` e redireciona para o formulário de login.
+
+**Query Parameters:**
+
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|-----------|------|-------------|-----------|
+| `redirect_uri` | `string` | Sim | URL de callback registrada. Deve estar em `ALLOWED_REDIRECT_URIS`. |
+| `state` | `string` | Recomendado | Token aleatório para proteção CSRF. |
+
+**Respostas:**
+
+| Status | Descrição |
+|--------|-----------|
+| `302` | Redireciona para o formulário de login do SSO |
+| `400` | `redirect_uri` não autorizado |
+
+---
+
+## POST /api/webhook/payment
+
+Recebe notificações de pagamento do app-front, verificadas com HMAC SHA256.
+
+**Payload:**
+
+```json
+{
+  "event": "subscription.activated",
+  "data": {
+    "subscription_id": "uuid",
+    "product_id": "uuid",
+    "product_name": "Club EasyGoal",
+    "user_email": "usuario@email.com",
+    "user_name": "João Silva",
+    "amount": 9900,
+    "frequency": "MONTHLY",
+    "started_at": "2026-02-22T10:00:00.000Z",
+    "is_test": false
+  },
+  "timestamp": "2026-02-22T10:00:00.000Z",
+  "signature": "hmac-sha256-hex-aqui"
+}
+```
+
+**Implementação:**
+
+```ts
+// src/app/api/webhook/payment/route.ts (no projeto SSO)
+import { createHmac, timingSafeEqual } from 'crypto';
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  const rawBody = await request.text();
+
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: 'Payload invalido' }, { status: 400 });
+  }
+
+  const { signature, ...bodyWithoutSignature } = payload;
+  if (!signature || typeof signature !== 'string') {
+    return NextResponse.json({ error: 'Assinatura ausente' }, { status: 401 });
+  }
+
+  const secret = process.env.APP_WEBHOOK_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: 'Configuracao incompleta' }, { status: 500 });
+  }
+
+  const expectedSignature = createHmac('sha256', secret)
+    .update(JSON.stringify(bodyWithoutSignature))
+    .digest('hex');
+
+  const sigBuffer = Buffer.from(signature, 'hex');
+  const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+
+  if (
+    sigBuffer.length !== expectedBuffer.length ||
+    !timingSafeEqual(sigBuffer, expectedBuffer)
+  ) {
+    return NextResponse.json({ error: 'Assinatura invalida' }, { status: 401 });
+  }
+
+  const event = payload.event as string;
+  const data = payload.data as Record<string, unknown>;
+
+  if (event === 'subscription.activated') {
+    const email = data.user_email as string;
+    const name = data.user_name as string;
+    const productName = data.product_name as string;
+    const isTest = data.is_test as boolean;
+
+    if (!isTest) {
+      await upsertUserAccess({ email, name, productName });
+    }
+  }
+
+  return NextResponse.json({ received: true });
+}
+```
+
+**Respostas:**
+
+| Status | Descrição |
+|--------|-----------|
+| `200` | Webhook recebido e processado |
+| `400` | Payload inválido |
+| `401` | Assinatura ausente ou inválida |
+| `500` | Configuração incompleta no servidor |
+
+---
+
+## GET /api/me
+
+Retorna os dados do perfil do usuário autenticado. Requer Bearer token válido.
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Resposta 200:**
+
+```json
+{
+  "id": "uuid-do-usuario",
+  "email": "usuario@email.com",
+  "name": "João Silva",
+  "avatar_url": "https://..."
+}
+```
+
+**Implementação:**
+
+```ts
+// src/app/api/me/route.ts (no projeto SSO)
+import { jwtVerify } from 'jose';
+import { NextResponse, type NextRequest } from 'next/server';
+
+const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  if (!token) {
+    return NextResponse.json({ error: 'Token ausente' }, { status: 401 });
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, jwtSecret, {
+      issuer: 'sso.easygoal.com.br',
+    });
+
+    const userId = payload.sub!;
+    const user = await getUserById(userId);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario nao encontrado' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar_url: user.avatar_url ?? null,
+    });
+  } catch {
+    return NextResponse.json({ error: 'Token invalido ou expirado' }, { status: 401 });
+  }
+}
+```
+
+**Respostas:**
+
+| Status | Descrição |
+|--------|-----------|
+| `200` | Perfil do usuário |
+| `401` | Token ausente, inválido ou expirado |
+| `404` | Usuário não encontrado |

@@ -1,0 +1,99 @@
+---
+title: "Arquitetura do Ecossistema"
+description: "Como app-front, SSO e Club LP se comunicam para formar o ecossistema EasyGoal."
+---
+
+## Os três projetos
+
+O ecossistema EasyGoal é composto por três projetos principais que trabalham juntos:
+
+<Columns cols={3}>
+  <Card title="app-front" icon="browser">
+    Marketplace principal. Gerencia produtos SaaS, assinaturas e pagamentos via AbacatePay. Envia webhooks ao SSO quando um pagamento é confirmado.
+  </Card>
+  <Card title="SSO" icon="key">
+    Serviço de autenticação centralizado em `sso.easygoal.com.br`. Emite tokens JWT, recebe webhooks do app-front e expõe `/api/me`.
+  </Card>
+  <Card title="Club LP" icon="star">
+    Landing page de produto que consome o SSO para autenticar usuários e exibir perfil. Pode ser replicado para qualquer produto SaaS.
+  </Card>
+</Columns>
+
+## Fluxo de pagamento + acesso
+
+```
+[Usuário] → [app-front] → paga assinatura
+                ↓
+        [app-front] ──HMAC SHA256──▶ [SSO /api/webhook/payment]
+                                              ↓
+                                   SSO libera acesso ao usuário
+```
+
+### Fluxo de autenticação (Club LP)
+
+```
+[Club LP]  →  [SSO]  →  [Club LP callback]  →  [Perfil]
+   (1)          (2)              (3)               (4)
+
+1. Botão "Acessar" redireciona para SSO com redirect_uri
+2. SSO autentica (login com conta EasyGoal) e redireciona de volta
+3. Callback recebe access_token + refresh_token, salva em cookie httpOnly
+4. Página de perfil lê cookie, chama SSO /api/me, exibe dados
+```
+
+## Variáveis de ambiente por projeto
+
+<AccordionGroup>
+  <Accordion title="app-front (.env.local)">
+    ```env
+    # Secret para assinar os webhooks enviados ao SSO
+    SSO_WEBHOOK_SECRET=7a6736e0f173e96935adb481e14668d5efb9340c4e65027ef45fb2eb392117ee
+    SSO_WEBHOOK_URL=https://sso.easygoal.com.br/api/webhook/payment
+    ```
+  </Accordion>
+
+  <Accordion title="SSO (.env)">
+    ```env
+    # Secret compartilhado com o app-front para verificar webhooks
+    APP_WEBHOOK_SECRET=7a6736e0f173e96935adb481e14668d5efb9340c4e65027ef45fb2eb392117ee
+
+    # Lista de redirect_uris permitidas (separadas por vírgula)
+    ALLOWED_REDIRECT_URIS=https://club.easygoal.com.br/auth/callback,http://localhost:3002/auth/callback
+
+    # JWT para assinar os access_tokens
+    JWT_SECRET=<gerar-segredo-proprio-do-sso>
+    JWT_ACCESS_EXPIRES=3600
+    JWT_REFRESH_EXPIRES=2592000
+    ```
+  </Accordion>
+
+  <Accordion title="Club LP (.env.local)">
+    ```env
+    NEXT_PUBLIC_SSO_URL=https://sso-dev.easygoal.com.br
+    NEXT_PUBLIC_APP_URL=https://app.easygoal.com.br
+    NEXT_PUBLIC_CLUB_URL=https://club.easygoal.com.br
+
+    SECRET_KEY=<gerar-com-node -e "require('crypto').randomBytes(32).toString('hex')">
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Stack tecnológica
+
+Todos os projetos utilizam **Next.js 14+ (App Router)** com TypeScript. Isso permite compartilhar tipos, padrões de autenticação e utilitários no monorepo.
+
+| Projeto | Framework | Domínio |
+|---------|-----------|---------|
+| app-front | Next.js 14+ | app.easygoal.com.br |
+| SSO | Next.js 14+ | sso.easygoal.com.br |
+| Club LP | Next.js 14+ | club.easygoal.com.br |
+| Docs | Mintlify | docs.easygoal.com.br |
+
+## Resumo dos endpoints SSO
+
+| Método | Endpoint | Quem chama | Descrição |
+|--------|----------|-----------|-----------|
+| `GET` | `/auth/login?redirect_uri=...&state=...` | Club LP | Inicia autenticação |
+| `GET` | `/auth/callback` *(interno)* | SSO após login | Redireciona com tokens |
+| `POST` | `/api/webhook/payment` | app-front | Notifica pagamento confirmado |
+| `GET` | `/api/me` | Club LP | Retorna perfil do usuário logado |

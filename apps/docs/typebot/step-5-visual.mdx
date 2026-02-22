@@ -1,0 +1,67 @@
+---
+title: "Step 5 — Identidade Visual e Assets"
+description: "Coleta todos os assets visuais necessários para a página do produto no marketplace."
+---
+
+## Objetivo
+
+Coletar todos os assets visuais necessários para a página do produto no marketplace EasyGoal.
+
+## Especificações de Assets
+
+| Asset | Formato | Dimensões | Obrigatório |
+|-------|---------|-----------|------------|
+| Logo | PNG ou SVG | Mínimo 256×256, fundo transparente | Sim |
+| Favicon | ICO ou PNG | 32×32 | Recomendado |
+| Screenshots | PNG ou JPG | Qualquer (mínimo 3) | Sim |
+| Banner | PNG ou JPG | 1200×630 recomendado | Sim |
+| Vídeo | URL YouTube/Vimeo | — | Opcional |
+
+## Fluxo no Typebot
+
+<Steps>
+  <Step title="Logo">
+    Upload: PNG ou SVG com fundo transparente, mínimo 256×256 → variável `logo_file`
+  </Step>
+  <Step title="Favicon">
+    Upload: ICO ou PNG 32×32 (opcional) → variável `favicon_file`
+  </Step>
+  <Step title="Cores da Marca">
+    - Cor primária (hex, ex: #4F46E5) → `primary_color`
+    - Cor secundária (hex, opcional) → `secondary_color`
+  </Step>
+  <Step title="Screenshots">
+    Upload múltiplo: mínimo 3, recomendado 5 → `screenshots`
+    Legendas separadas por `|` → `screenshot_captions`
+  </Step>
+  <Step title="Banner">
+    Upload: 1200×630px recomendado → variável `banner_file`
+  </Step>
+  <Step title="Vídeo Demonstrativo">
+    URL de vídeo no YouTube ou Vimeo (opcional) → `demo_video_url`
+  </Step>
+  <Step title="Estilo Visual">
+    Input de texto: descrever o estilo (ex: moderno, minimalista, colorido, corporativo) → `visual_style`
+  </Step>
+</Steps>
+
+## Colunas da Planilha (Step 5)
+
+| Coluna | Header | Variável |
+|--------|--------|----------|
+| E | logo_url | `{{logo_file}}` |
+| F | favicon_url | `{{favicon_file}}` |
+| G | primary_color | `{{primary_color}}` |
+| H | secondary_color | `{{secondary_color}}` |
+| I | screenshots | `{{screenshots}}` |
+| J | screenshot_captions | `{{screenshot_captions}}` |
+| K | banner_url | `{{banner_file}}` |
+| L | demo_video_url | `{{demo_video_url}}` |
+| M | visual_style | `{{visual_style}}` |
+
+## Validação pelo Admin
+
+- [ ] Logo tem fundo transparente e resolução adequada
+- [ ] Screenshots representam as principais funcionalidades
+- [ ] Banner tem as dimensões corretas para o marketplace
+- [ ] Cores primária/secundária estão em formato hex válido

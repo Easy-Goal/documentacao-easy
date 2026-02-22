@@ -1,0 +1,61 @@
+---
+title: "API Reference — Introdução"
+description: "Visão geral das APIs do ecossistema EasyGoal: SSO e Webhooks."
+---
+
+## APIs do Ecossistema EasyGoal
+
+O ecossistema EasyGoal expõe duas superfícies de API principais:
+
+<Columns cols={2}>
+  <Card title="SSO API" icon="key" href="/api-reference/sso-api">
+    Endpoints de autenticação: `/auth/login` e `/api/me`. Usados pelo Club LP e qualquer app registrado.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/api-reference/webhook">
+    Endpoint `POST /api/webhook/payment` do SSO. Chamado pelo app-front com payload assinado via HMAC SHA256.
+  </Card>
+</Columns>
+
+## Autenticação
+
+### Bearer Token (JWT)
+
+Usado nos endpoints do SSO pelo Club LP e apps registrados:
+
+```
+Authorization: Bearer <access_token>
+```
+
+O `access_token` é emitido pelo SSO após autenticação e tem validade de **1 hora** por padrão (`JWT_ACCESS_EXPIRES=3600`).
+
+### HMAC SHA256 (Webhooks)
+
+Usado pelo app-front ao chamar o SSO:
+
+```ts
+import { createHmac } from 'crypto';
+
+const signature = createHmac('sha256', process.env.SSO_WEBHOOK_SECRET!)
+  .update(JSON.stringify(bodyWithoutSignature))
+  .digest('hex');
+```
+
+O SSO verifica a assinatura usando `timingSafeEqual` para prevenir timing attacks.
+
+## Base URLs
+
+| Ambiente | SSO | app-front |
+|----------|-----|-----------|
+| Produção | `https://sso.easygoal.com.br` | `https://app.easygoal.com.br` |
+| Desenvolvimento | `http://localhost:3001` | `http://localhost:3000` |
+
+## Códigos de Status
+
+| Status | Descrição |
+|--------|-----------|
+| `200` | Sucesso |
+| `302` | Redirecionamento (fluxo OAuth) |
+| `400` | Parâmetro inválido ou ausente |
+| `401` | Não autenticado / assinatura inválida |
+| `404` | Recurso não encontrado |
+| `500` | Erro interno do servidor |

@@ -1,0 +1,84 @@
+---
+title: "Step 2 — SSO e API Key"
+description: "Guia o produtor na criação do app, API Key e configuração das URLs de callback para integração SSO."
+---
+
+## Objetivo
+
+Guiar o produtor na criação do app, API Key, e configuração das URLs de callback para integração SSO com o ecossistema EasyGoal.
+
+<Note>
+Pré-requisito: Step 1 concluído com `integration_type = "integrated"`. Se `integration_type = "external"`, este step pode ser pulado.
+</Note>
+
+## Fluxo no Typebot
+
+<Steps>
+  <Step title="Introdução SSO">
+    Explicar o que será configurado e o que o produtor precisará ter em mãos.
+  </Step>
+  <Step title="Criação do App">
+    Instruções para acessar `/producer/api-keys`, criar um novo app e salvar a API Key.
+  </Step>
+  <Step title="API Key Prefix">
+    Input de texto: "Cole o prefixo da sua API Key (ex: eg_...AbC12345)" → variável `api_key_prefix`
+  </Step>
+  <Step title="URLs de Callback">
+    - URL de callback PRODUÇÃO (obrigatório) → `callback_url_prod`
+    - URL de callback STAGING (opcional) → `callback_url_staging`
+    - URL de callback LOCALHOST → `callback_url_local`
+  </Step>
+  <Step title="Scopes Selecionados">
+    Checkboxes: `user:read`, `user:email`, `billing:read`, `billing:write`, `products:read` → `selected_scopes`
+  </Step>
+  <Step title="Instalação do Pacote">
+    Instruções de instalação do `@easygoal/auth` e configuração do `AuthProvider`.
+  </Step>
+  <Step title="Teste de Integração">
+    Botões: "O login funcionou?" → Sim / Não, tive problemas → `sso_test_result`
+  </Step>
+  <Step title="Ambiente de Teste">
+    - URL do staging → `staging_url`
+    - Email de teste → `test_email`
+    - Credenciais de teste → `test_credentials`
+  </Step>
+</Steps>
+
+## Instalação do Pacote SSO
+
+```bash
+npm install @easygoal/auth
+```
+
+```ts
+const authConfig = {
+  loginUrl: 'https://sso.easygoal.com.br',
+  appUrl: 'https://meuapp.com',
+  apiKey: 'SUA_API_KEY',
+  scopes: ['user:read', 'user:email'],
+};
+```
+
+## Colunas da Planilha (Step 2)
+
+| Coluna | Header | Variável |
+|--------|--------|----------|
+| E | api_key_prefix | `{{api_key_prefix}}` |
+| F | callback_url_prod | `{{callback_url_prod}}` |
+| G | callback_url_staging | `{{callback_url_staging}}` |
+| H | callback_url_local | `{{callback_url_local}}` |
+| I | selected_scopes | `{{selected_scopes}}` |
+| J | sso_test_result | `{{sso_test_result}}` |
+| K | sso_test_issue | `{{sso_test_issue}}` |
+| L | staging_url | `{{staging_url}}` |
+| M | test_email | `{{test_email}}` |
+| N | test_credentials | `{{test_credentials}}` |
+
+## Checklist de Validação (Admin)
+
+- [ ] API Key existe e está pendente/aprovada
+- [ ] URLs de callback são HTTPS (exceto localhost)
+- [ ] URLs batem com o domínio do produto
+- [ ] Scopes solicitados fazem sentido para o tipo de app
+- [ ] Teste de login funciona no ambiente de staging
+- [ ] Pacote `@easygoal/auth` integrado corretamente

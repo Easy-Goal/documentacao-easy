@@ -1,0 +1,60 @@
+---
+title: "Club LP — Visão Geral"
+description: "Landing page mínima que autentica via SSO EasyGoal, exibe perfil do usuário e redireciona para o app principal."
+---
+
+## O que é o Club LP?
+
+O **Club LP** é um projeto de landing page que serve como referência de implementação para qualquer produto SaaS que precise:
+
+1. Autenticar usuários via SSO EasyGoal
+2. Exibir o perfil do usuário logado
+3. Redirecionar para o app principal ou gerenciar assinaturas
+
+> **Stack:** Next.js 14+ (App Router) — mesmo padrão do app-front.
+
+## Arquitetura do Fluxo
+
+```
+[Club LP]  →  [SSO]  →  [Club LP callback]  →  [Perfil]
+   (1)          (2)              (3)               (4)
+
+1. Botão "Acessar" redireciona para SSO com redirect_uri
+2. SSO autentica (login com conta EasyGoal) e redireciona de volta
+3. Callback recebe access_token + refresh_token, salva em cookie httpOnly
+4. Página de perfil lê cookie, chama SSO /api/me, exibe dados
+```
+
+## Estrutura de Arquivos
+
+```
+src/app/
+  page.tsx                     → Landing page (botão de acesso)
+  auth/
+    login/route.ts             → Inicia o fluxo OAuth (gera state, redireciona)
+    callback/route.ts          → Recebe tokens do SSO, salva em cookie
+    logout/route.ts            → Limpa cookies
+  profile/
+    page.tsx                   → Página de perfil (protegida)
+  api/
+    me/route.ts                → Proxy autenticado para SSO /api/me
+middleware.ts                  → Protege /profile, redireciona se não autenticado
+```
+
+## Variáveis de Ambiente
+
+```env
+# .env.local do projeto Club
+NEXT_PUBLIC_SSO_URL=https://sso-dev.easygoal.com.br
+NEXT_PUBLIC_APP_URL=https://app.easygoal.com.br
+NEXT_PUBLIC_CLUB_URL=https://club.easygoal.com.br
+
+SECRET_KEY=<gerar-com-node -e "require('crypto').randomBytes(32).toString('hex')">
+```
+
+## Checklist do Club LP
+
+<Check>Registrar `redirect_uri` (`https://club.easygoal.com.br/auth/callback`) nas `allowed_redirect_urls` do api_app no app-front</Check>
+<Check>Configurar `.env.local` com as URLs corretas</Check>
+<Check>Testar fluxo completo: `/ → /auth/login → SSO → /auth/callback → /profile`</Check>
+<Check>Em produção: HTTPS obrigatório (cookies `secure: true`)</Check>

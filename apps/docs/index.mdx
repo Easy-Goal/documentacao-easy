@@ -1,0 +1,54 @@
+---
+title: "EasyGoal — Documentação"
+description: "Ecossistema para criação, distribuição e monetização de produtos SaaS no marketplace EasyGoal."
+---
+
+## Bem-vindo ao EasyGoal
+
+A EasyGoal é uma plataforma que conecta **produtores** de softwares SaaS a usuários finais, fornecendo infraestrutura completa para autenticação, pagamentos e distribuição via marketplace.
+
+<Columns cols={3}>
+  <Card title="app-front" icon="browser" href="/introducao/arquitetura">
+    Marketplace principal. Gerencia produtos, assinaturas e pagamentos via AbacatePay.
+  </Card>
+  <Card title="SSO" icon="key" href="/sso/visao-geral">
+    Serviço de autenticação centralizado. Emite tokens JWT e integra os apps do ecossistema.
+  </Card>
+  <Card title="Club LP" icon="star" href="/club-lp/visao-geral">
+    Landing page de produto de exemplo que autentica via SSO e exibe perfil do usuário.
+  </Card>
+</Columns>
+
+## Por onde começar
+
+<Columns cols={2}>
+  <Card title="Arquitetura do Ecossistema" icon="diagram-project" href="/introducao/arquitetura">
+    Entenda como app-front, SSO e Club LP se comunicam.
+  </Card>
+  <Card title="Monorepo Multistack" icon="folder-tree" href="/monorepo/estrutura">
+    Estrutura de repositório centralizado para todos os projetos EasyGoal.
+  </Card>
+  <Card title="Para Produtores" icon="rocket" href="/typebot/visao-geral">
+    7 steps para publicar seu produto SaaS no marketplace.
+  </Card>
+  <Card title="Integrar SSO" icon="plug" href="/sso/fluxo-oauth">
+    Guia completo para implementar o fluxo OAuth no seu app.
+  </Card>
+</Columns>
+
+## Segurança entre os projetos
+
+```
+app-front  ──HMAC SHA256──▶  SSO
+                             SSO  ──JWT Bearer──▶  Club LP
+                             Club LP  ──sem secrets──▶  /api/me (SSO)
+```
+
+| Camada | Proteção | Implementação |
+|--------|----------|---------------|
+| app-front → SSO webhook | HMAC SHA256 | `createHmac('sha256', secret).update(body)` |
+| SSO → Club LP (tokens) | JWT assinado | `SignJWT` com `JWT_SECRET` do SSO |
+| Club LP → SSO `/api/me` | Bearer token | `Authorization: Bearer <access_token>` |
+| Redirect URI | Lista de permitidos | `ALLOWED_REDIRECT_URIS` no SSO |
+| State (CSRF) | Cookie httpOnly | Gerado em `/auth/login`, verificado no callback |
+| Cookies | httpOnly + secure | Nunca acessíveis por JavaScript |

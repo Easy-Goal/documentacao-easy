@@ -1,0 +1,121 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "EasyGoal",
+  "colors": {
+    "primary": "#F97316",
+    "light": "#FB923C",
+    "dark": "#EA580C"
+  },
+  "background": {
+    "dark": "#0F1729"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Introdução",
+        "groups": [
+          {
+            "group": "Visão Geral",
+            "pages": ["index", "introducao/arquitetura"]
+          },
+          {
+            "group": "Monorepo",
+            "pages": ["monorepo/estrutura", "monorepo/setup"]
+          }
+        ]
+      },
+      {
+        "tab": "Para Produtores",
+        "groups": [
+          {
+            "group": "Steps do Produto SaaS",
+            "pages": [
+              "typebot/visao-geral",
+              "typebot/step-1-dados-basicos",
+              "typebot/step-2-sso",
+              "typebot/step-3-pagamentos",
+              "typebot/step-4-analytics",
+              "typebot/step-5-visual",
+              "typebot/step-6-compliance",
+              "typebot/step-7-testes"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SSO & Club LP",
+        "groups": [
+          {
+            "group": "SSO",
+            "pages": [
+              "sso/visao-geral",
+              "sso/fluxo-oauth",
+              "sso/endpoints"
+            ]
+          },
+          {
+            "group": "Club LP",
+            "pages": [
+              "club-lp/visao-geral",
+              "club-lp/implementacao"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Referência",
+            "pages": [
+              "api-reference/introducao",
+              "api-reference/sso-api",
+              "api-reference/webhook"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Suporte",
+          "href": "mailto:suporte@easygoal.com.br",
+          "icon": "envelope"
+        },
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/easygoal",
+          "icon": "github"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Suporte",
+        "href": "mailto:suporte@easygoal.com.br"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Acessar App",
+      "href": "https://app.easygoal.com.br"
+    }
+  },
+  "contextual": {
+    "options": ["copy", "view", "claude", "cursor", "vscode"]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/easygoal"
+    }
+  }
+}

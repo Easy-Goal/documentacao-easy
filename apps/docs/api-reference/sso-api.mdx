@@ -1,0 +1,93 @@
+---
+title: "SSO API"
+description: "Endpoints de autenticação e perfil do serviço SSO EasyGoal."
+---
+
+## GET /auth/login
+
+Inicia o fluxo de autenticação OAuth. Valida `redirect_uri` contra a lista de URIs permitidas e redireciona para o formulário de login.
+
+**Query Parameters:**
+
+<ParamField query="redirect_uri" type="string" required>
+  URL de callback onde o SSO enviará os tokens após autenticação. Deve estar registrada em `ALLOWED_REDIRECT_URIS`.
+</ParamField>
+
+<ParamField query="state" type="string">
+  Token aleatório para proteção CSRF. Gerado pelo app cliente e verificado no callback.
+</ParamField>
+
+**Exemplos de resposta:**
+
+```
+302 Found
+Location: https://sso.easygoal.com.br/auth/form
+Set-Cookie: pending_redirect_uri=...; HttpOnly; SameSite=Lax
+Set-Cookie: pending_state=...; HttpOnly; SameSite=Lax
+```
+
+```json
+// 400 Bad Request
+{
+  "error": "redirect_uri nao autorizado"
+}
+```
+
+---
+
+## GET /api/me
+
+Retorna os dados do perfil do usuário autenticado.
+
+**Headers:**
+
+<ParamField header="Authorization" type="string" required>
+  `Bearer <access_token>` — token JWT emitido pelo SSO.
+</ParamField>
+
+**Resposta 200:**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "usuario@email.com",
+  "name": "João Silva",
+  "avatar_url": "https://example.com/avatar.jpg"
+}
+```
+
+**Respostas de erro:**
+
+```json
+// 401 — Token ausente
+{ "error": "Token ausente" }
+
+// 401 — Token inválido ou expirado
+{ "error": "Token invalido ou expirado" }
+
+// 404 — Usuário não encontrado
+{ "error": "Usuario nao encontrado" }
+```
+
+---
+
+## Como o Club LP consome `/api/me`
+
+O Club LP cria um proxy em `/api/me` que chama o SSO em server-side. O `access_token` nunca é exposto ao browser:
+
+```ts
+// Club LP → src/app/api/me/route.ts
+export async function GET(request: NextRequest) {
+  const accessToken = request.cookies.get('access_token')?.value;
+
+  const res = await fetch(`${process.env.NEXT_PUBLIC_SSO_URL}/api/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: 'no-store',
+  });
+
+  const data = await res.json();
+  return NextResponse.json(data);
+}
+```
+
+O browser do usuário chama `/api/me` (no próprio domínio do Club LP), que internamente chama `sso.easygoal.com.br/api/me` com o token do cookie.

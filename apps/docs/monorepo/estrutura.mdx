@@ -1,0 +1,94 @@
+---
+title: "Estrutura do Monorepo"
+description: "Organização do monorepo multistack que centraliza app-front, SSO, Club LP e a documentação."
+---
+
+## Visão Geral
+
+O monorepo EasyGoal centraliza o desenvolvimento de todos os projetos do ecossistema, utilizando **Turborepo** ou **Nx** para gerenciar a build e as dependências entre pacotes.
+
+## Estrutura de Diretórios
+
+```
+/easygoal-monorepo
+├── apps/
+│   ├── app-front/        (Next.js — Marketplace principal)
+│   ├── sso/              (Next.js — Serviço de autenticação)
+│   ├── club-lp/          (Next.js — Landing page de produto)
+│   └── docs/             (Mintlify — Documentação)
+├── packages/
+│   ├── ui/               (Componentes de UI compartilhados)
+│   ├── types/            (Tipos TypeScript compartilhados)
+│   ├── config/           (ESLint, Prettier, TSConfig)
+│   ├── utils/            (Funções utilitárias compartilhadas)
+│   └── webhooks/         (Definições e validação de webhooks)
+├── tools/                (Scripts de automação, CI/CD)
+├── .env.example
+├── package.json          (root — workspace config)
+└── README.md
+```
+
+## Pacotes compartilhados
+
+<Columns cols={2}>
+  <Card title="packages/ui" icon="palette">
+    Componentes React reutilizáveis (buttons, cards, inputs) com a identidade visual EasyGoal — azul escuro e laranja.
+  </Card>
+  <Card title="packages/types" icon="code">
+    Interfaces TypeScript compartilhadas: `UserProfile`, `Subscription`, `WebhookPayload`, `SSOToken`, etc.
+  </Card>
+  <Card title="packages/config" icon="gear">
+    Configurações de ferramentas: `eslint.config.js`, `prettier.config.js`, `tsconfig.base.json`.
+  </Card>
+  <Card title="packages/webhooks" icon="webhook">
+    Utilitário de validação HMAC SHA256 para webhooks. Usado pelo SSO para verificar chamadas do app-front.
+  </Card>
+</Columns>
+
+## Configuração do workspace (package.json raiz)
+
+```json
+{
+  "name": "easygoal-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "type-check": "turbo type-check"
+  },
+  "devDependencies": {
+    "turbo": "latest"
+  }
+}
+```
+
+## Paleta de Cores EasyGoal
+
+A identidade visual do ecossistema usa **azul escuro** como base e **laranja** como cor de destaque:
+
+| Token | HSL | Hex | Uso |
+|-------|-----|-----|-----|
+| `--primary` | `24 95% 53%` | `#F97316` | Botões, links, destaques |
+| `--background` | `222 47% 11%` | `#0F1729` | Fundo principal |
+| `--card` | `222 47% 13%` | `#121E34` | Cards e painéis |
+| `--secondary` | `222 47% 18%` | `#182644` | Elementos secundários |
+| `--muted-foreground` | `215 20% 55%` | `#798BAA` | Texto secundário |
+
+```css
+@layer base {
+  :root {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --primary: 24 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --card: 222 47% 13%;
+    --border: 222 47% 20%;
+    --ring: 24 95% 53%;
+  }
+}
+```

@@ -1,0 +1,64 @@
+---
+title: "SSO — Visão Geral"
+description: "O serviço de autenticação centralizado do ecossistema EasyGoal."
+---
+
+## O que é o SSO EasyGoal?
+
+O SSO (Single Sign-On) é o serviço de autenticação centralizado do ecossistema EasyGoal. Ele:
+
+- Autentica usuários com conta EasyGoal e emite tokens JWT
+- Recebe webhooks do **app-front** quando um pagamento é confirmado
+- Expõe `/api/me` para que apps registrados busquem dados do usuário logado
+- Valida `redirect_uri` para garantir que apenas apps autorizados recebam tokens
+
+## Variáveis de Ambiente
+
+```env
+# Secret compartilhado com o app-front para verificar webhooks
+APP_WEBHOOK_SECRET=7a6736e0f173e96935adb481e14668d5efb9340c4e65027ef45fb2eb392117ee
+
+# Lista de redirect_uris permitidas (separadas por vírgula)
+ALLOWED_REDIRECT_URIS=https://club.easygoal.com.br/auth/callback,http://localhost:3002/auth/callback
+
+# JWT para assinar os access_tokens emitidos pelo SSO
+JWT_SECRET=<gerar-outro-segredo-proprio-do-sso>
+JWT_ACCESS_EXPIRES=3600      # 1 hora em segundos
+JWT_REFRESH_EXPIRES=2592000  # 30 dias em segundos
+```
+
+<Warning>
+O `APP_WEBHOOK_SECRET` deve ser **idêntico** ao `SSO_WEBHOOK_SECRET` configurado no app-front. Qualquer divergência fará com que todos os webhooks sejam rejeitados com status 401.
+</Warning>
+
+## Endpoints Disponíveis
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| `GET` | `/auth/login` | Inicia autenticação com `redirect_uri` e `state` |
+| `POST` | `/api/webhook/payment` | Recebe notificações de pagamento do app-front |
+| `GET` | `/api/me` | Retorna perfil do usuário via Bearer token |
+
+## CORS
+
+O SSO deve aceitar requests de origens autorizadas:
+
+```ts
+// middleware.ts (no projeto SSO)
+const ALLOWED_ORIGINS = [
+  'https://app.easygoal.com.br',
+  'https://club.easygoal.com.br',
+  'http://localhost:3000', // app-front dev
+  'http://localhost:3002', // club dev
+];
+```
+
+## Checklist do SSO
+
+<Check>Configurar `APP_WEBHOOK_SECRET` (= `SSO_WEBHOOK_SECRET` do app-front)</Check>
+<Check>Configurar `ALLOWED_REDIRECT_URIS` com a URL do Club LP</Check>
+<Check>Implementar `POST /api/webhook/payment` com verificação HMAC</Check>
+<Check>Garantir que `GET /auth/login` valida `redirect_uri` antes de aceitar</Check>
+<Check>Implementar `GET /api/me` com validação JWT</Check>
+<Check>Configurar CORS para aceitar `app.easygoal.com.br` e `club.easygoal.com.br`</Check>
+<Check>Testar webhook com o botão "Testar Webhook" no admin do app-front</Check>

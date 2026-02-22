@@ -1,0 +1,275 @@
+---
+title: "Implementação do Club LP"
+description: "Código completo para implementar a landing page com autenticação via SSO EasyGoal."
+---
+
+## 1. Landing Page
+
+```tsx
+// src/app/page.tsx
+import Link from 'next/link';
+
+export default function Home() {
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center gap-8 p-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-4xl font-bold">Club EasyGoal</h1>
+        <p className="text-muted-foreground text-lg">
+          Acesse conteúdos exclusivos com sua conta EasyGoal.
+        </p>
+      </div>
+
+      <a
+        href="/auth/login"
+        className="rounded-lg bg-primary px-8 py-3 text-primary-foreground font-semibold hover:opacity-90 transition"
+      >
+        Acessar minha conta
+      </a>
+    </main>
+  );
+}
+```
+
+## 2. Iniciar Login
+
+Gera um `state` aleatório (CSRF protection), salva em cookie e redireciona ao SSO:
+
+```ts
+// src/app/auth/login/route.ts
+import { NextResponse, type NextRequest } from 'next/server';
+import { randomBytes } from 'crypto';
+
+export function GET(_request: NextRequest) {
+  const state = randomBytes(16).toString('hex');
+  const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL!;
+  const clubUrl = process.env.NEXT_PUBLIC_CLUB_URL!;
+
+  const redirectUri = `${clubUrl}/auth/callback`;
+
+  const loginUrl = new URL(`${ssoUrl}/auth/login`);
+  loginUrl.searchParams.set('redirect_uri', redirectUri);
+  loginUrl.searchParams.set('state', state);
+
+  const response = NextResponse.redirect(loginUrl.toString());
+
+  response.cookies.set('oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 5, // 5 minutos
+    path: '/',
+  });
+
+  return response;
+}
+```
+
+## 3. Callback
+
+Recebe `access_token`, `refresh_token` e `state` do SSO. Valida o state e salva tokens em cookies httpOnly:
+
+```ts
+// src/app/auth/callback/route.ts
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
+  const accessToken = searchParams.get('access_token');
+  const refreshToken = searchParams.get('refresh_token');
+  const returnedState = searchParams.get('state');
+  const error = searchParams.get('error');
+
+  if (error) {
+    return NextResponse.redirect(new URL(`/?error=${error}`, request.url));
+  }
+
+  if (!accessToken || !refreshToken) {
+    return NextResponse.redirect(new URL('/?error=missing_tokens', request.url));
+  }
+
+  // Validar state (CSRF)
+  const savedState = request.cookies.get('oauth_state')?.value;
+  if (!savedState || savedState !== returnedState) {
+    return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
+  }
+
+  const response = NextResponse.redirect(new URL('/profile', request.url));
+
+  response.cookies.delete('oauth_state');
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+  };
+
+  response.cookies.set('access_token', accessToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60, // 1 hora
+  });
+
+  response.cookies.set('refresh_token', refreshToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60 * 24 * 30, // 30 dias
+  });
+
+  return response;
+}
+```
+
+## 4. Proxy para o Perfil
+
+Chama o SSO em server-side com o `access_token` do cookie. O browser nunca vê o token diretamente:
+
+```ts
+// src/app/api/me/route.ts
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  const accessToken = request.cookies.get('access_token')?.value;
+
+  if (!accessToken) {
+    return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+  }
+
+  const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL!;
+
+  const res = await fetch(`${ssoUrl}/api/me`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (res.status === 401) {
+    return NextResponse.json({ error: 'Token expirado' }, { status: 401 });
+  }
+
+  const data = await res.json();
+  return NextResponse.json(data);
+}
+```
+
+## 5. Logout
+
+```ts
+// src/app/auth/logout/route.ts
+import { NextResponse } from 'next/server';
+
+export function GET() {
+  const response = NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_CLUB_URL!));
+  response.cookies.delete('access_token');
+  response.cookies.delete('refresh_token');
+  return response;
+}
+```
+
+## 6. Middleware de Proteção
+
+```ts
+// middleware.ts
+import { NextResponse, type NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  const accessToken = request.cookies.get('access_token')?.value;
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith('/profile')) {
+    if (!accessToken) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/profile/:path*'],
+};
+```
+
+## 7. Página de Perfil
+
+```tsx
+// src/app/profile/page.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url?: string;
+}
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
+
+  useEffect(() => {
+    fetch('/api/me')
+      .then(async (res) => {
+        if (res.status === 401) {
+          router.push('/auth/login');
+          return;
+        }
+        const data = await res.json();
+        setUser(data);
+      })
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  return (
+    <main className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
+      {user.avatar_url && (
+        <img
+          src={user.avatar_url}
+          alt={user.name}
+          className="h-20 w-20 rounded-full object-cover border"
+        />
+      )}
+
+      <div className="text-center space-y-1">
+        <h2 className="text-2xl font-bold">{user.name}</h2>
+        <p className="text-muted-foreground">{user.email}</p>
+      </div>
+
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <a
+          href={`${appUrl}/billing`}
+          className="rounded-lg bg-primary px-6 py-3 text-center text-primary-foreground font-semibold hover:opacity-90 transition"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Gerenciar assinatura no EasyGoal
+        </a>
+
+        <a
+          href="/auth/logout"
+          className="rounded-lg border px-6 py-3 text-center text-sm text-muted-foreground hover:bg-muted transition"
+        >
+          Sair
+        </a>
+      </div>
+    </main>
+  );
+}
+```

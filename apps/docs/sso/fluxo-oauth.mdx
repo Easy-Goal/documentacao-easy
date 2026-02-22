@@ -1,0 +1,217 @@
+---
+title: "Fluxo OAuth"
+description: "Como o SSO autentica usuários e redireciona com tokens para apps registrados."
+---
+
+## Visão Geral do Fluxo
+
+```
+[App (Club LP)]  →  [SSO /auth/login]  →  [Formulário de login]
+                                                    ↓
+                                         [Usuário se autentica]
+                                                    ↓
+[App /auth/callback] ←── tokens na URL ───  [SSO redireciona]
+         ↓
+ [Salva tokens em cookies httpOnly]
+         ↓
+ [Redireciona para /profile]
+```
+
+## 1. Iniciar Login (App → SSO)
+
+O app gera um `state` aleatório (CSRF protection), salva em cookie e redireciona ao SSO:
+
+```ts
+// src/app/auth/login/route.ts (no app — ex: Club LP)
+import { NextResponse, type NextRequest } from 'next/server';
+import { randomBytes } from 'crypto';
+
+export function GET(_request: NextRequest) {
+  const state = randomBytes(16).toString('hex');
+  const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL!;
+  const clubUrl = process.env.NEXT_PUBLIC_CLUB_URL!;
+
+  const redirectUri = `${clubUrl}/auth/callback`;
+
+  const loginUrl = new URL(`${ssoUrl}/auth/login`);
+  loginUrl.searchParams.set('redirect_uri', redirectUri);
+  loginUrl.searchParams.set('state', state);
+
+  const response = NextResponse.redirect(loginUrl.toString());
+
+  response.cookies.set('oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 5, // 5 minutos
+    path: '/',
+  });
+
+  return response;
+}
+```
+
+## 2. Receber Login no SSO
+
+O SSO valida o `redirect_uri`, salva em cookie temporário e redireciona para o formulário de login:
+
+```ts
+// src/app/auth/login/route.ts (no projeto SSO)
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const redirectUri = searchParams.get('redirect_uri');
+  const state = searchParams.get('state') ?? '';
+
+  // Validar redirect_uri contra lista de URIs permitidas
+  const allowedUris = (process.env.ALLOWED_REDIRECT_URIS ?? '').split(',').map(u => u.trim());
+  if (!redirectUri || !allowedUris.includes(redirectUri)) {
+    return NextResponse.json({ error: 'redirect_uri nao autorizado' }, { status: 400 });
+  }
+
+  const response = NextResponse.redirect(new URL('/auth/form', request.url));
+
+  response.cookies.set('pending_redirect_uri', redirectUri, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 10,
+    path: '/',
+  });
+
+  response.cookies.set('pending_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 10,
+    path: '/',
+  });
+
+  return response;
+}
+```
+
+## 3. Emitir Tokens (SSO → App)
+
+Após o usuário autenticar, o SSO gera tokens JWT e redireciona para o `redirect_uri`:
+
+```ts
+// src/lib/issue-tokens.ts (no projeto SSO)
+import { SignJWT } from 'jose'; // npm install jose
+
+const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET);
+
+export async function issueAccessToken(userId: string, email: string): Promise<string> {
+  return new SignJWT({ sub: userId, email })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(`${process.env.JWT_ACCESS_EXPIRES ?? 3600}s`)
+    .setIssuer('sso.easygoal.com.br')
+    .sign(jwtSecret);
+}
+
+export async function issueRefreshToken(userId: string): Promise<string> {
+  return new SignJWT({ sub: userId, type: 'refresh' })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(`${process.env.JWT_REFRESH_EXPIRES ?? 2592000}s`)
+    .setIssuer('sso.easygoal.com.br')
+    .sign(jwtSecret);
+}
+
+export function buildCallbackUrl(
+  redirectUri: string,
+  accessToken: string,
+  refreshToken: string,
+  state: string
+): string {
+  const url = new URL(redirectUri);
+  url.searchParams.set('access_token', accessToken);
+  url.searchParams.set('refresh_token', refreshToken);
+  if (state) url.searchParams.set('state', state);
+  return url.toString();
+}
+```
+
+## 4. Callback no App
+
+O app recebe os tokens via query string, valida o `state` e salva em cookies httpOnly:
+
+```ts
+// src/app/auth/callback/route.ts (no app — ex: Club LP)
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+
+  const accessToken = searchParams.get('access_token');
+  const refreshToken = searchParams.get('refresh_token');
+  const returnedState = searchParams.get('state');
+  const error = searchParams.get('error');
+
+  if (error) {
+    return NextResponse.redirect(new URL(`/?error=${error}`, request.url));
+  }
+
+  if (!accessToken || !refreshToken) {
+    return NextResponse.redirect(new URL('/?error=missing_tokens', request.url));
+  }
+
+  // Validar state (CSRF)
+  const savedState = request.cookies.get('oauth_state')?.value;
+  if (!savedState || savedState !== returnedState) {
+    return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
+  }
+
+  const response = NextResponse.redirect(new URL('/profile', request.url));
+  response.cookies.delete('oauth_state');
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+  };
+
+  response.cookies.set('access_token', accessToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60, // 1 hora
+  });
+
+  response.cookies.set('refresh_token', refreshToken, {
+    ...cookieOptions,
+    maxAge: 60 * 60 * 24 * 30, // 30 dias
+  });
+
+  return response;
+}
+```
+
+<Note>
+Os tokens são passados como query string na URL de callback. Isso é aceitável pois o callback é imediatamente redirecionado e os tokens são salvos em cookies httpOnly — nunca acessíveis por JavaScript.
+</Note>
+
+## Middleware de Proteção
+
+```ts
+// middleware.ts (no app)
+import { NextResponse, type NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  const accessToken = request.cookies.get('access_token')?.value;
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith('/profile')) {
+    if (!accessToken) {
+      return NextResponse.redirect(new URL('/auth/login', request.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ['/profile/:path*'],
+};
+```
