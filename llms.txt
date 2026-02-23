@@ -1,0 +1,368 @@
+# EasyGoal — LLM Context Guide
+
+> Este arquivo ensina qualquer IA a entender o ecossistema EasyGoal, sua arquitetura,
+> padrões de integração e como os projetos se conectam.
+>
+> Para mapeamento de páginas ↔ documentação e navegação entre apps, leia também: `llms-pages.txt`
+
+---
+
+## O que é o EasyGoal?
+
+EasyGoal (grafado "Easy Goal" em textos de interface) é uma plataforma que conecta
+**produtores de software SaaS** a usuários finais, fornecendo infraestrutura completa
+para autenticação, pagamentos e distribuição via marketplace.
+
+### Regras de nomenclatura
+
+| Contexto | Correto | Errado |
+|----------|---------|--------|
+| Texto de UI / headings | **Easy Goal** (com espaço) | EasyGoal |
+| Código, URLs, pacotes, env vars | `easygoal` / `EasyGoal` | Easy Goal |
+| Produto Club LP | **Easy Club** | EasyClub |
+
+---
+
+## Ecossistema — projetos principais
+
+| Projeto    | Domínio (prod)              | Porta (dev) | Descrição |
+|------------|-----------------------------|-----------|----|
+| SSO        | sso.easygoal.com.br         | **3000**  | Autenticação centralizada com Supabase Auth |
+| app-front  | app.easygoal.com.br         | **3001**  | Marketplace: produtos SaaS, assinaturas, pagamentos |
+| Docs       | docs.easygoal.com.br        | 3002      | Documentação Mintlify (este repositório) |
+
+> **Atenção:** SSO roda na porta 3000, app-front na 3001. O app-front aponta
+> `NEXT_PUBLIC_SSO_URL=http://localhost:3000`.
+
+**Stack:** Next.js 14+ (App Router) + TypeScript + Supabase em ambos os projetos principais.
+
+**Outros projetos:** `easy-club-launchpad` (Vite), `lp-easy-club` (Next.js),
+`lp-72hrs` (Next.js), `site-easygoal` — landing pages sem rotas de auth próprias.
+
+---
+
+## Arquitetura de Autenticação
+
+O SSO usa **Supabase Auth** como backend. Suporta:
+- Email + senha
+- OAuth: Google, GitHub, Azure/Microsoft
+
+O fluxo cross-domain funciona assim:
+
+```
+[app-front] detecta sem sessão Supabase
+    ↓
+Redireciona para SSO: {SSO_URL}/auth/login?redirect_to=<callback_url>
+    ↓
+SSO autentica via Supabase, obtém access_token + refresh_token
+    ↓
+SSO retorna tokens via redirect para callback_url
+    ↓
+[app-front /auth/callback] recebe tokens, estabelece sessão Supabase local
+    ↓
+Redireciona para /dashboard
+```
+
+**Parâmetro de redirect:** `redirect_to` (não `redirect_uri`).
+
+O guard server-side no app-front:
+```ts
+// src/app/(authenticated)/layout.tsx
+const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/dashboard`;
+redirect(
+  `${process.env.NEXT_PUBLIC_SSO_URL}/auth/login?redirect_to=${encodeURIComponent(callbackUrl)}`
+);
+```
+
+---
+
+## Arquitetura de Pagamento → SSO
+
+```
+[Usuário] → [app-front] → paga via AbacatePay
+                ↓ webhook AbacatePay confirma
+        app-front ──POST HMAC SHA256──▶ SSO /api/webhook/payment
+                                               ↓
+                                  SSO cria usuário / gera link de cadastro
+                                  (envia email via Resend — em implementação)
+```
+
+---
+
+## Endpoints do SSO (reais)
+
+### Páginas de Autenticação
+
+| Rota | Tipo | Descrição |
+|------|------|-----------|
+| `/auth/login` | Page | Formulário de login (email/senha + OAuth) |
+| `/auth/signup` | Page | Criar conta |
+| `/auth/forgot-password` | Page | Solicitar reset de senha |
+| `/auth/reset-password` | Page | Redefinir senha (via link de email) |
+| `/auth/callback` | Route | Callback OAuth (Supabase redirect) |
+| `/auth/signout` | Route (POST) | Logout — invalida sessão Supabase |
+| `/auth/error` | Page | Página de erro de autenticação |
+| `/complete-profile` | Page | Completar perfil (nome, empresa, CNPJ) após OAuth |
+| `/dashboard` | Page | Dashboard do usuário no SSO |
+
+### APIs do SSO
+
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| `POST` | `/api/webhook/payment` | Recebe notificação de compra (HMAC SHA256) |
+| `GET`  | `/api/webhook/payment` | Health check do endpoint |
+| `GET`  | `/api/plans/public` | Planos disponíveis (público) |
+
+### POST /api/webhook/payment — Payload Real
+
+```json
+{
+  "event": "purchase.completed",
+  "customer": {
+    "email": "usuario@email.com",
+    "name": "João Silva",
+    "phone": "+5511999999999"
+  },
+  "product": {
+    "id": "uuid-do-produto",
+    "plan_slug": "easy-standard"
+  },
+  "company": {
+    "name": "Empresa Ltda",
+    "cnpj": "00.000.000/0001-00"
+  },
+  "signature": "<hmac-sha256-hex>"
+}
+```
+
+`plan_slug` aceita: `easy-standard`, `easy-pro`, `easy-enterprise`
+
+**Verificação de assinatura no SSO:**
+```ts
+import { createHmac } from 'crypto';
+
+// secret = process.env.WEBHOOK_SECRET (env var real do SSO)
+const expectedSignature = createHmac('sha256', secret)
+  .update(rawBody)   // string do body ANTES do JSON.parse
+  .digest('hex');
+
+const isValid = expectedSignature === data.signature;
+```
+
+**Assinatura no app-front:**
+```ts
+import { createHmac } from 'crypto';
+
+const body = { event, customer, product, company, timestamp };
+const bodyString = JSON.stringify(body);
+const signature = createHmac('sha256', process.env.SSO_WEBHOOK_SECRET!)
+  .update(bodyString)
+  .digest('hex');
+
+const payload = { ...body, signature };
+```
+
+**Respostas:** `200` ok | `400` campos ausentes | `401` assinatura inválida | `500` erro interno
+
+---
+
+## Variáveis de Ambiente por Projeto (reais)
+
+### app-front (.env.example)
+```env
+# Supabase — mesma instância do SSO
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_URL=
+SECRET_KEY=
+
+# URLs
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+NEXT_PUBLIC_SSO_URL=http://localhost:3000
+NEXT_PUBLIC_DOCS_URL=https://docs.easygoal.com.br
+
+# Email
+RESEND_API_KEY=
+
+# Typebot (URLs públicas dos templates de cada step)
+NEXT_PUBLIC_TYPEBOT_STEP_BASIC_DATA=
+NEXT_PUBLIC_TYPEBOT_STEP_SSO_API_KEY=
+NEXT_PUBLIC_TYPEBOT_STEP_PAYMENTS=
+NEXT_PUBLIC_TYPEBOT_STEP_ANALYTICS=
+NEXT_PUBLIC_TYPEBOT_STEP_VISUAL_IDENTITY=
+NEXT_PUBLIC_TYPEBOT_STEP_COMPLIANCE=
+NEXT_PUBLIC_TYPEBOT_STEP_TESTING=
+
+# AbacatePay
+ABACATEPAY_API_KEY=
+ABACATEPAY_WEBHOOK_SECRET=
+
+# Webhook para o SSO (DEVE ser idêntico ao WEBHOOK_SECRET do SSO)
+SSO_WEBHOOK_URL=http://localhost:3000/api/webhook/payment
+SSO_WEBHOOK_SECRET=
+```
+
+### SSO (.env.example)
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_JWT_SECRET_KEY=your-jwt-secret-key
+
+# App
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_DOCS_URL=https://docs.easygoal.com.br
+
+# Webhook (DEVE ser idêntico ao SSO_WEBHOOK_SECRET do app-front)
+WEBHOOK_SECRET=your-webhook-secret-key
+
+# Email
+RESEND_API_KEY=your-resend-api-key
+```
+
+**CRÍTICO:** `WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser idênticos.
+
+---
+
+## Rotas do app-front
+
+Todas dentro do route group `(authenticated)` — protegidas por Supabase Auth.
+
+### Menu base (todos os usuários)
+| Rota | Label sidebar |
+|------|---------------|
+| `/dashboard` | Dashboard |
+| `/saas` | SaaS |
+| `/saas/[slug]` | Detalhe SaaS |
+| `/marketplace` | Serviços Avulsos |
+| `/marketplace/[serviceId]/request` | Solicitar serviço |
+| `/services` | Meus Serviços |
+| `/billing` | Cobranças |
+| `/settings` | Configurações |
+| `/settings/email` | Alterar email |
+| `/settings/password` | Alterar senha |
+| `/checkout/complete` | Pós-checkout |
+
+### Produtor verificado (dashboard em /producer/dashboard)
+| Rota | Label sidebar |
+|------|---------------|
+| `/producer/dashboard` | Dashboard |
+| `/producer/products` | Meus SaaS |
+| `/producer/products/new` | Novo Produto |
+| `/producer/products/[id]` | Detalhe do produto |
+| `/producer/products/[id]/steps` | Steps de onboarding |
+| `/producer/products/[id]/steps/[stepId]/submit` | Submeter step |
+| `/producer/submissions` | Submissões MVP |
+| `/producer/metrics` | Métricas |
+| `/producer/api-keys` | Chaves de API |
+| `/producer/invitation` | Convite de produtor |
+
+### Super Admin
+| Rota | Label sidebar |
+|------|---------------|
+| `/admin/dashboard` | Dashboard |
+| `/admin/users` | Usuários |
+| `/admin/companies` | Empresas |
+| `/admin/producers` | Produtores |
+| `/admin/saas-products` | SaaS |
+| `/admin/saas-products/[id]` | Detalhe (config Typebot) |
+| `/admin/saas-steps` | Steps Padrão |
+| `/admin/api-apps` | API Apps |
+| `/admin/service-requests` | Solicitações |
+| `/admin/withdrawals` | Saques |
+| `/admin/reports` | Relatórios |
+| `/admin/system/settings` | Configurações |
+| `/admin/system/admins` | Administradores |
+| `/admin/system/logs` | Logs |
+
+---
+
+## Estrutura dos Projetos (repositórios independentes)
+
+```
+/home/malconn/projects/easy/
+├── sso/                    (Next.js + Supabase — porta 3000)
+│   └── src/app/
+│       ├── auth/login, signup, forgot-password, reset-password, callback, signout, error
+│       ├── complete-profile/
+│       ├── dashboard/
+│       └── api/webhook/payment, plans, services
+├── app-front/              (Next.js + Supabase — porta 3001)
+│   └── src/app/
+│       ├── (authenticated)/  ← route group protegido
+│       ├── auth/callback     ← recebe tokens do SSO
+│       └── api/webhooks/abacatepay, admin/*, producer/*, saas/*
+├── documentacao-easygoal/  (Mintlify — `mint dev` dentro de apps/docs/)
+├── easy-club-launchpad/    (Vite + React — landing page Easy Club)
+├── lp-easy-club/           (Next.js — landing page Easy Club v2)
+├── lp-72hrs/               (Next.js — landing page 72hrs)
+└── site-easygoal/          (site institucional)
+```
+
+---
+
+## Fluxo para Novos Produtos SaaS (7 Steps)
+
+Todo produto SaaS passa por 7 steps usando **Typebot Cloud** como formulários conversacionais.
+
+| Step | Env Var no app-front | Rota do produtor |
+|------|---------------------|-----------------|
+| 1 — Dados Básicos | `NEXT_PUBLIC_TYPEBOT_STEP_BASIC_DATA` | `/producer/products/[id]/steps/[stepId]/submit` |
+| 2 — SSO e API Key | `NEXT_PUBLIC_TYPEBOT_STEP_SSO_API_KEY` | |
+| 3 — Pagamentos | `NEXT_PUBLIC_TYPEBOT_STEP_PAYMENTS` | |
+| 4 — Analytics GA4 | `NEXT_PUBLIC_TYPEBOT_STEP_ANALYTICS` | |
+| 5 — Identidade Visual | `NEXT_PUBLIC_TYPEBOT_STEP_VISUAL_IDENTITY` | |
+| 6 — Compliance | `NEXT_PUBLIC_TYPEBOT_STEP_COMPLIANCE` | |
+| 7 — Testes | `NEXT_PUBLIC_TYPEBOT_STEP_TESTING` | |
+
+Admin configura o Typebot ID em: `/admin/saas-products/[id]`
+
+---
+
+## Identidade Visual
+
+| Token CSS            | HSL              | Hex       | Uso |
+|----------------------|------------------|-----------|-----|
+| `--primary`          | `24 95% 53%`     | `#F97316` | Botões, links, destaques |
+| `--background`       | `222 47% 11%`    | `#0F1729` | Fundo principal |
+| `--card`             | `222 47% 13%`    | `#121E34` | Cards e painéis |
+| `--secondary`        | `222 47% 18%`    | `#182644` | Elementos secundários |
+| `--muted-foreground` | `215 20% 55%`    | `#798BAA` | Texto secundário |
+
+```css
+@layer base {
+  :root {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --primary: 24 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --card: 222 47% 13%;
+    --border: 222 47% 20%;
+    --ring: 24 95% 53%;
+  }
+}
+```
+
+---
+
+## Documentação Mintlify
+
+- **Rodar:** `cd apps/docs && mint dev` (deve ser executado DENTRO de `apps/docs/`)
+- **Config:** `apps/docs/docs.json`
+- **4 tabs:** Introdução, Para Produtores, SSO & Club LP, API Reference
+- **Componentes:** `<Columns>`, `<Card>`, `<AccordionGroup>`, `<Accordion>`, `<Steps>`,
+  `<Step>`, `<Tabs>`, `<Tab>`, `<Note>`, `<Warning>`, `<Tip>`, `<Check>`,
+  `<ParamField>`, `<ResponseField>`
+
+---
+
+## Erros Comuns e Soluções
+
+| Erro | Causa | Solução |
+|------|-------|---------|
+| Webhook 401 | `WEBHOOK_SECRET` ≠ `SSO_WEBHOOK_SECRET` | Garantir valores idênticos nos dois projetos |
+| Loop redirect app-front | Supabase session não estabelecida | Verificar `/auth/callback` e Supabase ANON_KEY |
+| `redirect_to` ignorado | URL não na allowlist Supabase | Adicionar em Supabase → Auth → URL Configuration |
+| OAuth callback falha | Redirect URL não cadastrada | Registrar em Supabase → Auth → Redirect URLs |
+| `mint dev` erro "no docs.json" | Diretório errado | Executar dentro de `apps/docs/` |
+| app-front na porta errada | Confusão SSO/app-front | SSO=3000, app-front=3001 |

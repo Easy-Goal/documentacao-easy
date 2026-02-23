@@ -1,0 +1,36 @@
+{
+  "name": "@easygoal/auth-provider",
+  "version": "1.0.0",
+  "description": "SSO auth provider para apps Next.js do ecossistema Easy Goal",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./middleware": {
+      "types": "./dist/middleware.d.ts",
+      "import": "./dist/middleware.mjs",
+      "require": "./dist/middleware.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "next": ">=14.0.0"
+  },
+  "dependencies": {
+    "jose": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "files": ["dist"],
+  "license": "MIT"
+}

@@ -1,0 +1,228 @@
+# EasyGoal — LLM Pages & Navigation Guide
+
+> Instrui qualquer IA sobre onde adicionar links de documentação e navegação
+> em cada página dos projetos reais do ecossistema Easy Goal.
+>
+> Leia junto com `llms.txt` para contexto completo.
+
+---
+
+## Variável de Ambiente — URL da Documentação
+
+Adicionar ao `.env.example` e `.env.local` de **todos os projetos**:
+
+```env
+NEXT_PUBLIC_DOCS_URL=https://docs.easygoal.com.br
+```
+
+Em desenvolvimento: `NEXT_PUBLIC_DOCS_URL=http://localhost:3002`
+
+Usar sempre via `process.env.NEXT_PUBLIC_DOCS_URL` — nunca hardcoded.
+
+---
+
+## Padrão de Link de Documentação
+
+```tsx
+// Links de docs abrem sempre em nova aba
+const docsUrl = process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.easygoal.com.br';
+
+<a
+  href={`${docsUrl}/sso/visao-geral`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-sm text-muted-foreground hover:text-primary underline"
+>
+  Ver documentação
+</a>
+```
+
+---
+
+## PROJETO: app-front (localhost:3001)
+
+### Onde adicionar (por prioridade)
+
+#### 1. Sidebar — link permanente para Documentação
+**Arquivo:** `src/components/layout/Sidebar.tsx`
+**Onde:** Na seção inferior, após o link "Configuracoes" e antes do `<UserMenu>`
+**Ícone:** `BookOpen` de `lucide-react`
+
+```tsx
+// Adicionar após o bloco de "Configuracoes":
+<Link
+  href={`${process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.easygoal.com.br'}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className={cn(
+    "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+    isCollapsed ? "justify-center" : "gap-3",
+    "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+  )}
+  title={isCollapsed ? "Documentação" : undefined}
+>
+  <BookOpen className="h-5 w-5 text-sidebar-foreground group-hover:text-sidebar-accent-foreground" />
+  {!isCollapsed && "Documentação"}
+</Link>
+```
+
+#### 2. UserMenu dropdown — link de Documentação
+**Arquivo:** `src/components/layout/UserMenu.tsx`
+**Onde:** No `<div className="py-1">`, após as opções de email/senha e antes do separador de logout
+**Ícone:** `BookOpen` de `lucide-react`
+
+```tsx
+// Adicionar no bloco de opções do dropdown:
+<a
+  href={process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.easygoal.com.br'}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+  onClick={() => setIsOpen(false)}
+>
+  <BookOpen className="h-4 w-4" />
+  Documentação
+</a>
+```
+
+### Mapa de páginas → docs (app-front)
+
+| Página (rota real) | Link de docs |
+|--------------------|-------------|
+| `/dashboard` | `{DOCS_URL}/introducao/arquitetura` |
+| `/saas` | `{DOCS_URL}/club-lp/visao-geral` |
+| `/billing` | `{DOCS_URL}/club-lp/visao-geral` |
+| `/producer/products` | `{DOCS_URL}/typebot/visao-geral` |
+| `/producer/products/[id]/steps` | `{DOCS_URL}/typebot/visao-geral` |
+| step 1 submit | `{DOCS_URL}/typebot/step-1-dados-basicos` |
+| step 2 submit | `{DOCS_URL}/typebot/step-2-sso` |
+| step 3 submit | `{DOCS_URL}/typebot/step-3-pagamentos` |
+| step 4 submit | `{DOCS_URL}/typebot/step-4-analytics` |
+| step 5 submit | `{DOCS_URL}/typebot/step-5-visual` |
+| step 6 submit | `{DOCS_URL}/typebot/step-6-compliance` |
+| step 7 submit | `{DOCS_URL}/typebot/step-7-testes` |
+| `/producer/api-keys` | `{DOCS_URL}/sso/visao-geral` |
+| `/admin/api-apps` | `{DOCS_URL}/sso/visao-geral` |
+| `/admin/saas-products/[id]` | `{DOCS_URL}/typebot/visao-geral` |
+| Sidebar (global) | `{DOCS_URL}` |
+| UserMenu dropdown | `{DOCS_URL}` |
+
+---
+
+## PROJETO: SSO (localhost:3000)
+
+### Onde adicionar links de documentação
+
+#### 1. Página de Login `/auth/login`
+**Arquivo:** `src/app/auth/login/page.tsx`
+**Onde:** Rodapé do `<CardContent>`, após o link "Criar conta"
+
+```tsx
+<div className="text-center text-xs text-muted-foreground pt-2">
+  <a
+    href={`${process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.easygoal.com.br'}/sso/fluxo-oauth`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="hover:text-primary underline"
+  >
+    Documentação
+  </a>
+</div>
+```
+
+#### 2. Header do SSO
+**Arquivo:** `src/components/Header/index.tsx`
+**Onde:** Link "Documentação" no header
+
+#### 3. Dashboard do SSO `/dashboard`
+**Arquivo:** `src/app/dashboard/page.tsx`
+**Onde:** Adicionar botão "Ir para o Easy Goal" no `<div className="flex gap-4 pt-4">`
+
+```tsx
+// Junto ao botão "Sair" no dashboard do SSO:
+<a
+  href={process.env.NEXT_PUBLIC_APP_FRONT_URL ?? 'https://app.easygoal.com.br'}
+  className="..."
+>
+  Ir para o Easy Goal
+</a>
+```
+
+> **Importante:** O `NEXT_PUBLIC_APP_URL` do SSO aponta para o próprio SSO.
+> Criar `NEXT_PUBLIC_APP_FRONT_URL=http://localhost:3001` para linkar ao app-front.
+
+### Mapa de páginas → docs (SSO)
+
+| Página | Link de docs |
+|--------|-------------|
+| `/auth/login` | `{DOCS_URL}/sso/fluxo-oauth` |
+| `/auth/signup` | `{DOCS_URL}/sso/visao-geral` |
+| `/auth/error` | `{DOCS_URL}/sso/visao-geral` |
+| `/complete-profile` | `{DOCS_URL}/sso/visao-geral` |
+| `/dashboard` | `{DOCS_URL}/introducao/arquitetura` |
+
+---
+
+## Mapa Completo: Página → Docs URL
+
+```
+app-front:
+  /dashboard                                    → {DOCS_URL}/introducao/arquitetura
+  /saas                                         → {DOCS_URL}/club-lp/visao-geral
+  /billing                                      → {DOCS_URL}/club-lp/visao-geral
+  /producer/products                            → {DOCS_URL}/typebot/visao-geral
+  /producer/products/[id]/steps                 → {DOCS_URL}/typebot/visao-geral
+  /producer/products/[id]/steps/[id]/submit     → {DOCS_URL}/typebot/step-N-*
+  /producer/api-keys                            → {DOCS_URL}/sso/visao-geral
+  /admin/api-apps                               → {DOCS_URL}/sso/visao-geral
+  /admin/saas-products/[id]                     → {DOCS_URL}/typebot/visao-geral
+  Sidebar + UserMenu (global)                   → {DOCS_URL}
+
+sso:
+  /auth/login                                   → {DOCS_URL}/sso/fluxo-oauth
+  /auth/signup                                  → {DOCS_URL}/sso/visao-geral
+  /auth/error                                   → {DOCS_URL}/sso/visao-geral
+  /complete-profile                             → {DOCS_URL}/sso/visao-geral
+  /dashboard                                    → {DOCS_URL}/introducao/arquitetura
+```
+
+---
+
+## Mapa Completo: Navegação Entre Projetos
+
+```
+app-front (usuário logado):
+  Sidebar
+  └── Documentação → {DOCS_URL}                  (nova aba)
+  UserMenu dropdown
+  ├── Documentação → {DOCS_URL}                  (nova aba)
+  └── Sair → POST {SSO_URL}/auth/signout          (já implementado)
+
+SSO /dashboard (usuário autenticado no SSO):
+  ├── [Botão] Ir para o Easy Goal → {APP_FRONT_URL}/dashboard
+  └── [Link] Documentação → {DOCS_URL}/introducao/arquitetura
+
+SSO /auth/login:
+  └── [Link rodapé] Documentação → {DOCS_URL}/sso/fluxo-oauth
+```
+
+---
+
+## Checklist de Implementação
+
+### app-front
+- [ ] Adicionar `NEXT_PUBLIC_DOCS_URL` ao `.env.example` e `.env.local`
+- [ ] `Sidebar.tsx` — importar `BookOpen` + link "Documentação" após "Configuracoes"
+- [ ] `UserMenu.tsx` — importar `BookOpen` + link "Documentação" no dropdown
+
+### SSO
+- [ ] Adicionar `NEXT_PUBLIC_DOCS_URL` ao `.env.example` e `.env`
+- [ ] Criar `NEXT_PUBLIC_APP_FRONT_URL` nos dois envs para linkar ao app-front
+- [ ] `Header/index.tsx` — link "Documentação"
+- [ ] `/auth/login` — link de docs no rodapé do card
+- [ ] `/dashboard` — botão "Ir para o Easy Goal" → `{APP_FRONT_URL}/dashboard`
+
+### Regras obrigatórias
+- `target="_blank"` + `rel="noopener noreferrer"` em todos os links externos
+- Nunca hardcode URL — sempre `process.env.NEXT_PUBLIC_DOCS_URL`
+- Não alterar lógica de autenticação, apenas UI/navegação
