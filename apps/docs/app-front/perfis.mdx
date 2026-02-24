@@ -1,0 +1,93 @@
+---
+title: "Perfis de Usuário"
+description: "O app-front possui três perfis distintos: Usuário, Produtor e Admin. Cada perfil tem acesso a áreas e funcionalidades específicas."
+---
+
+## Sistema de Perfis
+
+A plataforma [app.easygoal.com.br](https://app.easygoal.com.br) utiliza um sistema de três perfis baseado em flags no registro do usuário. O perfil é determinado automaticamente no momento do login.
+
+<Columns cols={3}>
+  <Card title="Usuário" icon="user">
+    Perfil padrão de todo usuário autenticado. Pode navegar pelo catálogo SaaS, contratar serviços, gerenciar assinaturas e participar do programa de afiliados.
+  </Card>
+  <Card title="Produtor" icon="store">
+    Perfil para criadores de produtos SaaS. Habilita a área de gestão de produtos, métricas, submissões MVP e integração via API Keys.
+  </Card>
+  <Card title="Admin" icon="shield">
+    Acesso exclusivo à equipe interna Easy Goal. Gerencia usuários, empresas, produtores, aprova produtos e administra o sistema completo.
+  </Card>
+</Columns>
+
+---
+
+## Como os perfis são determinados
+
+O perfil é lido a partir dos campos booleanos do objeto `AuthUser`, retornado pelo SSO após a autenticação:
+
+```typescript
+interface AuthUser {
+  is_super_admin: boolean; // → perfil Admin (exclusivo)
+  is_producer:    boolean; // → perfil Produtor
+  // Todo usuário autenticado tem acesso ao perfil Usuário
+}
+```
+
+| Campo | Valor | Perfil resultante |
+|-------|-------|-------------------|
+| `is_super_admin` | `true` | **Admin** — acessa apenas a área admin |
+| `is_producer` | `true` | **Produtor** — acessa área de produtor + área de usuário |
+| Ambos `false` | — | **Usuário** — acessa área padrão do app |
+
+<Note>
+  O perfil Admin é exclusivo: um super admin não vê o menu de usuário/produtor. Isso garante que a área de gestão não se misture com a navegação de cliente.
+</Note>
+
+---
+
+## Hierarquia de acesso
+
+```
+Admin (is_super_admin = true)
+├── Gestão de usuários, empresas, produtores
+├── Aprovação de produtos SaaS
+├── Controle financeiro (saques, afiliados)
+└── Sistema (configurações, admins, logs)
+
+Produtor (is_producer = true)
+├── Área do usuário (catálogo, marketplace, afiliados)
+└── Área do produtor
+    ├── Dashboard de métricas
+    ├── Gestão de produtos SaaS
+    ├── Acompanhamento de submissões
+    └── Chaves de API
+
+Usuário (padrão)
+├── Dashboard pessoal
+├── Catálogo SaaS + Marketplace
+├── Meus serviços + Cobranças
+└── Programa de afiliados
+```
+
+---
+
+## Ativação do perfil Produtor
+
+O perfil de Produtor é ativado manualmente pela equipe Easy Goal após avaliação. O fluxo é:
+
+<Steps>
+  <Step title="Solicitação">
+    O usuário demonstra interesse em publicar um produto SaaS na plataforma.
+  </Step>
+  <Step title="Cadastro pelo Admin">
+    Um administrador cria o registro de produtor em `/admin/producers/new`, vinculando ao usuário e à empresa.
+  </Step>
+  <Step title="Convite">
+    O usuário recebe um convite em `/producer/invitation` para aceitar os termos e configurar o perfil.
+  </Step>
+  <Step title="Verificação">
+    O admin altera o status do produtor de `pending` para `verified`. A partir desse momento o menu de produtor aparece no sidebar.
+  </Step>
+</Steps>
+
+Status possíveis de um produtor: `pending` · `verified` · `suspended` · `rejected`

@@ -27,6 +27,27 @@
         ]
       },
       {
+        "tab": "Plataforma",
+        "groups": [
+          {
+            "group": "Perfis & Acesso",
+            "pages": ["app-front/perfis"]
+          },
+          {
+            "group": "Área do Usuário",
+            "pages": ["app-front/usuario", "app-front/afiliado"]
+          },
+          {
+            "group": "Área do Produtor",
+            "pages": ["app-front/produtor"]
+          },
+          {
+            "group": "Área Admin",
+            "pages": ["app-front/admin"]
+          }
+        ]
+      },
+      {
         "tab": "Para Produtores",
         "groups": [
           {

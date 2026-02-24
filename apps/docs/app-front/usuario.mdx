@@ -1,0 +1,103 @@
+---
+title: "Área do Usuário"
+description: "Funcionalidades disponíveis para todos os usuários autenticados: dashboard, catálogo SaaS, marketplace, serviços, cobranças e programa de afiliados."
+---
+
+## Visão geral
+
+Todo usuário autenticado tem acesso à área padrão do app. O sidebar exibe quatro seções principais:
+
+| Seção | Rotas | Descrição |
+|-------|-------|-----------|
+| **Dashboard** | `/dashboard` | Resumo de assinaturas, serviços ativos e atividade recente |
+| **Produtos & Serviços** | `/saas`, `/marketplace`, `/services`, `/billing` | Catálogo, contratos e cobranças |
+| **Afiliados** | `/affiliate/*` | Programa de comissões e configurações de saque |
+| **Configurações** | `/settings/*` | Email, senha e dados da conta |
+
+---
+
+## Dashboard
+
+**Rota:** `/dashboard`
+
+Painel central com visão consolidada do que o usuário tem ativo na plataforma. Exibe:
+
+- Assinaturas SaaS ativas
+- Serviços em andamento (marketplace)
+- Comissões de afiliado pendentes
+- Atividade recente da conta
+
+---
+
+## Catálogo SaaS
+
+**Rotas:** `/saas` · `/saas/[slug]`
+
+Listagem de todos os produtos SaaS disponíveis na plataforma. Cada produto foi revisado e aprovado pela equipe Easy Goal antes de aparecer aqui.
+
+**Página de produto** (`/saas/[slug]`):
+- Descrição, funcionalidades e planos de assinatura
+- Botão de contratação (redireciona para checkout)
+- Status da assinatura atual do usuário (caso já seja cliente)
+
+---
+
+## Marketplace
+
+**Rotas:** `/marketplace` · `/marketplace/[serviceId]/request`
+
+Catálogo de serviços avulsos oferecidos por produtores parceiros (implantações, consultorias, customizações, etc.).
+
+Para solicitar um serviço:
+
+<Steps>
+  <Step title="Navegar pelo catálogo">
+    Acesse `/marketplace` e encontre o serviço desejado.
+  </Step>
+  <Step title="Enviar solicitação">
+    Em `/marketplace/[serviceId]/request`, preencha os detalhes do projeto e envie a solicitação.
+  </Step>
+  <Step title="Aguardar retorno">
+    O produtor responsável recebe a solicitação e entra em contato para negociação e execução.
+  </Step>
+</Steps>
+
+---
+
+## Meus Serviços
+
+**Rota:** `/services`
+
+Lista de serviços contratados pelo usuário. Permite acompanhar o andamento das solicitações enviadas pelo marketplace.
+
+---
+
+## Cobranças
+
+**Rota:** `/billing`
+
+Histórico de cobranças e gestão de assinaturas ativas. Permite:
+
+- Visualizar todas as assinaturas SaaS
+- Consultar status de pagamentos (ativo, cancelado, pendente)
+- Cancelar assinaturas
+
+<Note>
+  O processamento de pagamentos é feito via **AbacatePay**. Cartões de crédito, débito e PIX são suportados dependendo do plano do produto.
+</Note>
+
+---
+
+## Configurações da conta
+
+**Rotas:** `/settings` · `/settings/email` · `/settings/password`
+
+Área de gestão da conta pessoal:
+
+- **`/settings/email`** — Alterar e-mail (somente para contas criadas com e-mail/senha)
+- **`/settings/password`** — Alterar senha (somente para contas criadas com e-mail/senha)
+- Contas autenticadas via Google/GitHub/Azure exibem apenas uma mensagem informativa sobre o provedor
+
+<Tip>
+  Usuários que fazem login via OAuth (Google, GitHub, Microsoft) não têm senha gerenciada dentro da plataforma. Para alterar, acesse diretamente o provedor de identidade.
+</Tip>

@@ -1,0 +1,134 @@
+---
+title: "Área do Produtor"
+description: "Interface completa para produtores parceiros: gerencie produtos SaaS, acompanhe métricas, monitore submissões MVP e configure integrações via API."
+---
+
+## Visão geral
+
+Usuários com perfil **Produtor** têm acesso a uma área dedicada para gestão dos seus produtos SaaS publicados na plataforma Easy Goal.
+
+O sidebar do produtor exibe as seguintes seções:
+
+| Seção | Rotas | Descrição |
+|-------|-------|-----------|
+| **Dashboard** | `/producer/dashboard` | KPIs e resumo da operação |
+| **Minha Loja** | `/producer/products`, `/producer/submissions`, `/producer/metrics` | Produtos, submissões e métricas |
+| **Integração** | `/producer/api-keys` | Chaves de API para webhooks e integrações |
+| **Afiliados** | `/affiliate/*` | Programa de afiliados (mesmo acesso do usuário) |
+
+---
+
+## Dashboard do Produtor
+
+**Rota:** `/producer/dashboard`
+
+Visão consolidada da operação do produtor:
+
+- Total de assinantes ativos por produto
+- Receita mensal recorrente (MRR)
+- Novas assinaturas e cancelamentos recentes
+- Status dos produtos (aprovado, pendente, rejeitado)
+
+---
+
+## Meus Produtos
+
+**Rotas:** `/producer/products` · `/producer/products/new` · `/producer/products/[id]`
+
+Central de gestão de produtos SaaS. Da listagem, o produtor pode:
+
+- Ver todos os produtos com seus status de publicação
+- Criar um novo produto
+- Editar um produto existente
+
+### Criar novo produto
+
+Ao acessar `/producer/products/new`, o produtor inicia o fluxo de cadastro de um novo produto SaaS. O formulário segue os 7 steps documentados na aba **Para Produtores**:
+
+<Steps>
+  <Step title="Dados básicos">Nome, descrição, categoria e planos de preço do produto.</Step>
+  <Step title="SSO">Configurar a integração com o SSO da Easy Goal para autenticação dos clientes.</Step>
+  <Step title="Pagamentos">Configurar planos e preços no AbacatePay.</Step>
+  <Step title="Analytics">Integrar com Google Analytics 4 para rastrear conversões.</Step>
+  <Step title="Visual">Personalizar cores, logo e identidade visual do produto no ecossistema.</Step>
+  <Step title="Compliance">Adicionar links de Termos de Uso e Política de Privacidade.</Step>
+  <Step title="Testes">Validar o fluxo completo antes da submissão para aprovação.</Step>
+</Steps>
+
+### Steps do produto
+
+**Rota:** `/producer/products/[id]/steps`
+
+Após criar um produto, o produtor gerencia o progresso de cada step. Cada step pode ser:
+
+- **Pendente** — ainda não configurado
+- **Em progresso** — em configuração
+- **Concluído** — validado e aprovado
+- **Rejeitado** — precisa de ajuste (com feedback do admin)
+
+Para enviar um step concluído para revisão: `/producer/products/[id]/steps/[stepId]/submit`
+
+---
+
+## Submissões MVP
+
+**Rota:** `/producer/submissions`
+
+Acompanhe o status de submissões dos seus produtos para revisão da equipe Easy Goal. Uma submissão é criada automaticamente quando o produtor marca todos os 7 steps como concluídos e solicita publicação.
+
+| Status | Significado |
+|--------|-------------|
+| `pending` | Aguardando análise do admin |
+| `in_review` | Em análise pela equipe |
+| `approved` | Produto aprovado e publicado no catálogo |
+| `rejected` | Produto rejeitado (com motivo no feedback) |
+
+---
+
+## Métricas
+
+**Rota:** `/producer/metrics`
+
+Dashboard analítico com dados de performance dos produtos:
+
+- **Assinantes:** total e evolução mensal
+- **MRR:** receita recorrente mensal por produto
+- **Churn:** taxa de cancelamento
+- **Afiliados:** quantidade de afiliados ativos e conversões geradas
+
+---
+
+## Chaves de API
+
+**Rota:** `/producer/api-keys`
+
+Gerencie as credenciais para integrar seus sistemas com a plataforma Easy Goal via webhooks.
+
+### Criando uma API Key
+
+Cada chave de API é associada a um produto específico e permite que o sistema externo do produtor receba notificações de eventos via webhook.
+
+```bash
+# Exemplo de header de autenticação para APIs do produtor
+Authorization: Bearer <api-key>
+```
+
+### Eventos suportados
+
+| Evento | Descrição |
+|--------|-----------|
+| `purchase.completed` | Nova assinatura ou compra avulsa realizada |
+| `subscription.cancelled` | Assinatura cancelada pelo cliente |
+| `subscription.renewed` | Renovação de assinatura |
+
+<Warning>
+  Guarde sua API Key com segurança. Em caso de vazamento, revogue-a imediatamente e gere uma nova — não é possível recuperar uma chave revogada.
+</Warning>
+
+---
+
+## Programa de afiliados (como produtor)
+
+Produtores também têm acesso à área de afiliados como usuário. Além disso, podem visualizar os afiliados que estão promovendo seus produtos nas métricas do dashboard.
+
+Para configurar a taxa de comissão dos afiliados de um produto, acesse as configurações do produto em `/producer/products/[id]`.
