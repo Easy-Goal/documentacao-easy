@@ -1,85 +1,84 @@
 ---
 title: "Estrutura do Monorepo"
-description: "Organização do monorepo multistack que centraliza app-front, SSO, Club LP e a documentação."
+description: "Organização dos repositórios e o monorepo de packages compartilhados (@easygoal/ui e @easygoal/auth)."
 ---
 
 ## Visão Geral
 
-O monorepo EasyGoal centraliza o desenvolvimento de todos os projetos do ecossistema, utilizando **Turborepo** ou **Nx** para gerenciar a build e as dependências entre pacotes.
+O ecossistema Easy Goal é composto por repositórios de aplicações independentes e um **monorepo de packages compartilhados** (`easygoal-ui`) que centraliza identidade visual e autenticação.
 
-## Estrutura de Diretórios
+## Repositórios de Aplicações
 
 ```
-/easygoal-monorepo
-├── apps/
-│   ├── app-front/        (Next.js — Marketplace principal)
-│   ├── sso/              (Next.js — Serviço de autenticação)
-│   ├── club-lp/          (Next.js — Landing page de produto)
-│   └── docs/             (Mintlify — Documentação)
+~/projects/easy/
+├── app-front/          Next.js — Marketplace principal (porta 3001)
+├── sso/                Next.js — Serviço de autenticação (porta 3000)
+├── easy-club-launchpad/  Vite React — Landing page Easy Club
+├── lp-easy-club/       Next.js — Landing page Easy Club v2
+├── lp-72hrs/           Next.js — Landing page 72hrs
+├── site-easygoal/      Next.js — Site institucional
+└── documentacao-easygoal/  Mintlify — Esta documentação (porta 3002)
+```
+
+## Monorepo de Packages (`easygoal-ui`)
+
+```
+easygoal-ui/                   github.com/easygoal/easygoal-ui
 ├── packages/
-│   ├── ui/               (Componentes de UI compartilhados)
-│   ├── types/            (Tipos TypeScript compartilhados)
-│   ├── config/           (ESLint, Prettier, TSConfig)
-│   ├── utils/            (Funções utilitárias compartilhadas)
-│   └── webhooks/         (Definições e validação de webhooks)
-├── tools/                (Scripts de automação, CI/CD)
-├── .env.example
-├── package.json          (root — workspace config)
-└── README.md
+│   ├── ui/                    @easygoal/ui — Design tokens + componentes React
+│   │   ├── src/
+│   │   │   ├── components/Logo/   Componente <Logo />
+│   │   │   ├── tokens/colors.ts   Paleta oficial (hex + CSS vars)
+│   │   │   └── index.ts
+│   │   ├── package.json
+│   │   └── tsup.config.ts
+│   └── auth/                  @easygoal/auth — SSO providers + middleware
+│       ├── src/
+│       │   ├── providers/AuthProvider.tsx
+│       │   ├── callback/handler.ts
+│       │   ├── callback/route.ts
+│       │   ├── middleware/updateSession.ts
+│       │   ├── types.ts
+│       │   └── index.ts
+│       ├── package.json
+│       └── tsup.config.ts
+├── package.json               root — pnpm workspaces
+└── pnpm-workspace.yaml
 ```
 
-## Pacotes compartilhados
+## Packages disponíveis
 
 <Columns cols={2}>
-  <Card title="packages/ui" icon="palette">
-    Componentes React reutilizáveis (buttons, cards, inputs) com a identidade visual EasyGoal — azul escuro e laranja.
+  <Card title="@easygoal/ui" icon="palette" href="/monorepo/setup">
+    Componente `<Logo />` e tokens de cor da identidade visual — azul escuro e laranja. **Disponível.**
   </Card>
-  <Card title="packages/types" icon="code">
-    Interfaces TypeScript compartilhadas: `UserProfile`, `Subscription`, `WebhookPayload`, `SSOToken`, etc.
+  <Card title="@easygoal/auth" icon="key" href="/monorepo/setup">
+    `AuthProvider`, `handleAuthCallback`, `updateSession` — SSO com Next.js + Supabase. **Disponível.**
   </Card>
-  <Card title="packages/config" icon="gear">
-    Configurações de ferramentas: `eslint.config.js`, `prettier.config.js`, `tsconfig.base.json`.
+  <Card title="@easygoal/types" icon="code">
+    Interfaces TypeScript compartilhadas: `UserProfile`, `Subscription`, `WebhookPayload`. **Planejado.**
   </Card>
-  <Card title="packages/webhooks" icon="webhook">
-    Utilitário de validação HMAC SHA256 para webhooks. Usado pelo SSO para verificar chamadas do app-front.
+  <Card title="@easygoal/webhooks" icon="webhook">
+    Utilitário de validação HMAC SHA256 para webhooks entre app-front e SSO. **Planejado.**
   </Card>
 </Columns>
 
-## Configuração do workspace (package.json raiz)
+## Paleta de Cores Oficial
 
-```json
-{
-  "name": "easygoal-monorepo",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "type-check": "turbo type-check"
-  },
-  "devDependencies": {
-    "turbo": "latest"
-  }
-}
-```
-
-## Paleta de Cores EasyGoal
-
-A identidade visual do ecossistema usa **azul escuro** como base e **laranja** como cor de destaque:
+Os valores abaixo são a fonte da verdade. Use `@easygoal/ui/tokens` para importar programaticamente.
 
 | Token | HSL | Hex | Uso |
 |-------|-----|-----|-----|
-| `--primary` | `24 95% 53%` | `#F97316` | Botões, links, destaques |
-| `--background` | `222 47% 11%` | `#0F1729` | Fundo principal |
-| `--card` | `222 47% 13%` | `#121E34` | Cards e painéis |
-| `--secondary` | `222 47% 18%` | `#182644` | Elementos secundários |
-| `--muted-foreground` | `215 20% 55%` | `#798BAA` | Texto secundário |
+| `primary` | `24 95% 53%` | `#F97316` | Botões, links, destaques |
+| `primaryLight` | `24 90% 60%` | `#FB923C` | Hover states |
+| `primaryDark` | `21 90% 48%` | `#EA580C` | Active states |
+| `background` | `222 47% 11%` | `#0F1729` | Fundo principal |
+| `card` | `222 47% 13%` | `#121E34` | Cards e painéis |
+| `secondary` | `222 47% 18%` | `#182644` | Elementos secundários |
+| `mutedForeground` | `215 20% 55%` | `#798BAA` | Texto secundário |
 
 ```css
+/* globals.css — copiar para novos projetos */
 @layer base {
   :root {
     --background: 222 47% 11%;
@@ -89,6 +88,17 @@ A identidade visual do ecossistema usa **azul escuro** como base e **laranja** c
     --card: 222 47% 13%;
     --border: 222 47% 20%;
     --ring: 24 95% 53%;
+    --radius: 0.75rem;
   }
 }
 ```
+
+## Adicionando novos packages
+
+Para adicionar um package ao monorepo, crie um novo diretório em `packages/`:
+
+```bash
+mkdir -p packages/meu-package/src
+```
+
+Crie `packages/meu-package/package.json` com o nome `@easygoal/meu-package`, `tsconfig.json` e `tsup.config.ts` seguindo o padrão dos packages existentes. O pnpm workspace detecta automaticamente.
