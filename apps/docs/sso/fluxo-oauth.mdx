@@ -3,7 +3,15 @@ title: "Fluxo OAuth"
 description: "Como o SSO autentica usuários e redireciona com tokens para apps registrados."
 ---
 
-## Visão Geral do Fluxo
+<Note>
+**Dois fluxos de integração existem no ecossistema:**
+
+1. **app-front / apps com Supabase** → usar `@easygoal/auth`. O fluxo usa `redirect_to` e sessões Supabase — **não** JWT customizado. Veja [Monorepo → Setup & Instalação](/monorepo/setup).
+
+2. **Apps externos (ex: Club LP) sem Supabase** → usar o fluxo OAuth customizado descrito abaixo com `redirect_uri`, `state` e tokens JWT próprios do SSO.
+</Note>
+
+## Visão Geral do Fluxo (Apps Externos)
 
 ```
 [App (Club LP)]  →  [SSO /auth/login]  →  [Formulário de login]

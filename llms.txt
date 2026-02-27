@@ -321,6 +321,8 @@ Admin configura o Typebot ID em: `/admin/saas-products/[id]`
 
 ## Identidade Visual
 
+### Paleta de Cores
+
 | Token CSS            | HSL              | Hex       | Uso |
 |----------------------|------------------|-----------|-----|
 | `--primary`          | `24 95% 53%`     | `#F97316` | Botões, links, destaques |
@@ -329,6 +331,7 @@ Admin configura o Typebot ID em: `/admin/saas-products/[id]`
 | `--secondary`        | `222 47% 18%`    | `#182644` | Elementos secundários |
 | `--muted-foreground` | `215 20% 55%`    | `#798BAA` | Texto secundário |
 
+**globals.css — copiar para novos projetos:**
 ```css
 @layer base {
   :root {
@@ -339,8 +342,211 @@ Admin configura o Typebot ID em: `/admin/saas-products/[id]`
     --card: 222 47% 13%;
     --border: 222 47% 20%;
     --ring: 24 95% 53%;
+    --radius: 0.75rem;
   }
 }
+```
+
+### Uso com Tailwind CSS
+
+Os tokens CSS acima se mapeiam diretamente às classes Tailwind. Use sempre `bg-background`, `text-foreground`, `bg-primary` etc. — **nunca hardcode hex no JSX**.
+
+```tsx
+// Fundo de página
+<div className="min-h-screen bg-background text-foreground">
+
+// Card padrão
+<div className="rounded-lg bg-card border border-border p-6">
+
+// Botão primário
+<button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2">
+
+// Texto secundário
+<span className="text-muted-foreground text-sm">
+
+// Ring de foco
+<input className="focus:ring-2 focus:ring-ring focus:ring-offset-2">
+```
+
+### Padrões de Componentes (shadcn/ui)
+
+Os projetos usam shadcn/ui com os tokens acima. Ao gerar componentes, seguir estes padrões:
+
+**Card:**
+```tsx
+<div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+  <h3 className="font-semibold text-foreground">{title}</h3>
+  <p className="text-muted-foreground text-sm mt-1">{description}</p>
+</div>
+```
+
+**Badge de status:**
+```tsx
+<span className="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-medium">
+  Ativo
+</span>
+```
+
+**Link de navegação na sidebar:**
+```tsx
+<Link
+  href={href}
+  className={cn(
+    "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+    isActive
+      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+      : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+  )}
+>
+  <Icon className="h-5 w-5 mr-3" />
+  {label}
+</Link>
+```
+
+### Logo
+
+O componente `<Logo />` do `@easygoal/ui`:
+- **`variant="dark"`** — fundo escuro: texto `#FAFAFA`, ícone laranja `#F97316`
+- **`variant="light"`** — fundo claro: texto `#09090B`, ícone laranja `#F97316`
+- O ícone circular é sempre laranja — nunca alterar sua cor
+- Caminho do SVG do ícone: `M102.456 31.0726...`
+
+---
+
+## Packages do Monorepo — Instalação e Uso
+
+O monorepo `easygoal-ui` (github.com/easygoal/easygoal-ui) exporta dois packages:
+
+| Package | Conteúdo |
+|---------|---------|
+| `@easygoal/ui` | Componente `<Logo />` + tokens de cor (`colors`, `cssVars`) |
+| `@easygoal/auth` | `AuthProvider`, `useAuthSession`, `createCallbackRoute`, `updateSession`, `defaultMatcherConfig` |
+
+### Instalação
+
+```bash
+# Via GitHub (recomendado enquanto não publicado no npm)
+npm install github:easygoal/easygoal-ui#main
+
+# Via path local (desenvolvimento com monorepo clonado)
+npm install ../easygoal-ui/packages/ui
+npm install ../easygoal-ui/packages/auth
+
+# pnpm local
+pnpm add link:../easygoal-ui/packages/ui
+pnpm add link:../easygoal-ui/packages/auth
+```
+
+No `package.json` (forma declarativa):
+```json
+{
+  "dependencies": {
+    "@easygoal/ui": "github:easygoal/easygoal-ui#main",
+    "@easygoal/auth": "github:easygoal/easygoal-ui#main"
+  }
+}
+```
+
+**Peer deps do `@easygoal/auth`:** `next >=14`, `@supabase/ssr >=0.5`, `react >=18`
+
+### Usando @easygoal/ui
+
+```tsx
+import { Logo, colors, cssVars } from "@easygoal/ui";
+
+// Logo — "dark" para fundos escuros (texto #FAFAFA), "light" para fundos claros (texto #09090B)
+// O ícone circular é sempre laranja #F97316 em ambos os variants
+<Logo variant="dark" width={133} />
+<Logo variant="light" width={100} />
+
+// Tokens de cor
+colors.primary      // "#F97316" — laranja principal
+colors.background   // "#0F1729" — azul escuro
+
+// Só tokens, sem carregar o componente React (tree-shakable)
+import { colors, cssVars } from "@easygoal/ui/tokens";
+```
+
+### Usando @easygoal/auth — Integração Completa com SSO
+
+O `@easygoal/auth` é a forma correta de conectar qualquer app Next.js + Supabase ao SSO Easy Goal.
+São necessários 4 arquivos:
+
+**1. AuthProvider no layout raiz**
+```tsx
+// app/layout.tsx
+import { AuthProvider } from "@easygoal/auth";
+import { createClient } from "@/utils/supabase/client";
+
+export default function RootLayout({ children }) {
+  return (
+    <AuthProvider
+      config={{
+        loginUrl: process.env.NEXT_PUBLIC_SSO_URL!,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL!,
+      }}
+      supabaseClient={createClient()}
+    >
+      {children}
+    </AuthProvider>
+  );
+}
+```
+
+**2. Callback route (recebe tokens do SSO)**
+```ts
+// app/auth/callback/route.ts
+import { createCallbackRoute } from "@easygoal/auth";
+
+export const GET = createCallbackRoute({
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  ssoUrl: process.env.NEXT_PUBLIC_SSO_URL,
+  appUrl: process.env.NEXT_PUBLIC_APP_URL,
+});
+```
+
+**3. Middleware de proteção de rotas**
+```ts
+// middleware.ts
+import { updateSession, defaultMatcherConfig } from "@easygoal/auth";
+import type { NextRequest } from "next/server";
+
+export async function middleware(request: NextRequest) {
+  return updateSession(request, {
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  });
+}
+
+export const config = defaultMatcherConfig;
+```
+
+**4. Hook de sessão (componentes client)**
+```tsx
+"use client";
+import { useAuthSession } from "@easygoal/auth";
+
+export function Header() {
+  const { session, signOut, isReady } = useAuthSession();
+
+  if (!isReady) return null;
+
+  return (
+    <header>
+      <span>{session?.user.email}</span>
+      <button onClick={signOut}>Sair</button>
+    </header>
+  );
+}
+```
+
+**Variáveis de ambiente necessárias para @easygoal/auth:**
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SSO_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3001
 ```
 
 ---

@@ -18,7 +18,7 @@
         "groups": [
           {
             "group": "Visão Geral",
-            "pages": ["index", "introducao/arquitetura"]
+            "pages": ["index", "introducao/arquitetura", "introducao/llm-context"]
           },
           {
             "group": "Monorepo",

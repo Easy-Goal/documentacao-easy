@@ -5,50 +5,65 @@ description: "Referência de todos os endpoints expostos pelo serviço de autent
 
 ## GET /auth/login
 
-Inicia o fluxo de autenticação. Valida `redirect_uri` e redireciona para o formulário de login.
+Inicia o fluxo de autenticação. Exibe o formulário de login e, após autenticação bem-sucedida, redireciona para `redirect_to`.
 
 **Query Parameters:**
 
 | Parâmetro | Tipo | Obrigatório | Descrição |
 |-----------|------|-------------|-----------|
-| `redirect_uri` | `string` | Sim | URL de callback registrada. Deve estar em `ALLOWED_REDIRECT_URIS`. |
-| `state` | `string` | Recomendado | Token aleatório para proteção CSRF. |
+| `redirect_to` | `string` | Não | URL de callback para onde redirecionar após login. Deve estar na allowlist do Supabase. |
+
+<Note>
+O parâmetro é `redirect_to`, não `redirect_uri`. O SSO usa Supabase Auth — a URL deve estar cadastrada em **Supabase → Auth → URL Configuration**.
+</Note>
+
+**Guard server-side no app-front:**
+```ts
+// src/app/(authenticated)/layout.tsx
+const callbackUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/dashboard`;
+redirect(
+  `${process.env.NEXT_PUBLIC_SSO_URL}/auth/login?redirect_to=${encodeURIComponent(callbackUrl)}`
+);
+```
 
 **Respostas:**
 
 | Status | Descrição |
 |--------|-----------|
-| `302` | Redireciona para o formulário de login do SSO |
-| `400` | `redirect_uri` não autorizado |
+| `200` | Renderiza o formulário de login |
+| `302` | Redireciona para `redirect_to` após login bem-sucedido |
 
 ---
 
 ## POST /api/webhook/payment
 
-Recebe notificações de pagamento do app-front, verificadas com HMAC SHA256.
+Recebe notificações de compra do app-front, verificadas com HMAC SHA256.
 
-**Payload:**
+**Payload real:**
 
 ```json
 {
-  "event": "subscription.activated",
-  "data": {
-    "subscription_id": "uuid",
-    "product_id": "uuid",
-    "product_name": "Club EasyGoal",
-    "user_email": "usuario@email.com",
-    "user_name": "João Silva",
-    "amount": 9900,
-    "frequency": "MONTHLY",
-    "started_at": "2026-02-22T10:00:00.000Z",
-    "is_test": false
+  "event": "purchase.completed",
+  "customer": {
+    "email": "usuario@email.com",
+    "name": "João Silva",
+    "phone": "+5511999999999"
   },
-  "timestamp": "2026-02-22T10:00:00.000Z",
-  "signature": "hmac-sha256-hex-aqui"
+  "product": {
+    "id": "uuid-do-produto",
+    "plan_slug": "easy-standard"
+  },
+  "company": {
+    "name": "Empresa Ltda",
+    "cnpj": "00.000.000/0001-00"
+  },
+  "signature": "<hmac-sha256-hex>"
 }
 ```
 
-**Implementação:**
+`plan_slug` aceita: `easy-standard`, `easy-pro`, `easy-enterprise`
+
+**Verificação da assinatura no SSO:**
 
 ```ts
 // src/app/api/webhook/payment/route.ts (no projeto SSO)
@@ -58,54 +73,69 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
 
-  let payload: Record<string, unknown>;
+  let data: Record<string, unknown>;
   try {
-    payload = JSON.parse(rawBody);
+    data = JSON.parse(rawBody);
   } catch {
-    return NextResponse.json({ error: 'Payload invalido' }, { status: 400 });
+    return NextResponse.json({ error: 'Payload inválido' }, { status: 400 });
   }
 
-  const { signature, ...bodyWithoutSignature } = payload;
+  const { signature } = data;
   if (!signature || typeof signature !== 'string') {
     return NextResponse.json({ error: 'Assinatura ausente' }, { status: 401 });
   }
 
-  const secret = process.env.APP_WEBHOOK_SECRET;
+  // env var real do SSO: WEBHOOK_SECRET
+  const secret = process.env.WEBHOOK_SECRET;
   if (!secret) {
-    return NextResponse.json({ error: 'Configuracao incompleta' }, { status: 500 });
+    return NextResponse.json({ error: 'Configuração incompleta' }, { status: 500 });
   }
 
   const expectedSignature = createHmac('sha256', secret)
-    .update(JSON.stringify(bodyWithoutSignature))
+    .update(rawBody) // rawBody ANTES do JSON.parse
     .digest('hex');
 
-  const sigBuffer = Buffer.from(signature, 'hex');
-  const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+  const sigBuf = Buffer.from(signature, 'hex');
+  const expBuf = Buffer.from(expectedSignature, 'hex');
 
-  if (
-    sigBuffer.length !== expectedBuffer.length ||
-    !timingSafeEqual(sigBuffer, expectedBuffer)
-  ) {
-    return NextResponse.json({ error: 'Assinatura invalida' }, { status: 401 });
+  if (sigBuf.length !== expBuf.length || !timingSafeEqual(sigBuf, expBuf)) {
+    return NextResponse.json({ error: 'Assinatura inválida' }, { status: 401 });
   }
 
-  const event = payload.event as string;
-  const data = payload.data as Record<string, unknown>;
-
-  if (event === 'subscription.activated') {
-    const email = data.user_email as string;
-    const name = data.user_name as string;
-    const productName = data.product_name as string;
-    const isTest = data.is_test as boolean;
-
-    if (!isTest) {
-      await upsertUserAccess({ email, name, productName });
-    }
+  // Processar evento
+  if (data.event === 'purchase.completed') {
+    const customer = data.customer as { email: string; name: string };
+    const product = data.product as { plan_slug: string };
+    // ... criar usuário ou atualizar acesso
   }
 
   return NextResponse.json({ received: true });
 }
 ```
+
+**Assinando no app-front:**
+
+```ts
+import { createHmac } from 'crypto';
+
+const body = { event, customer, product, company, timestamp };
+const bodyString = JSON.stringify(body);
+const signature = createHmac('sha256', process.env.SSO_WEBHOOK_SECRET!)
+  .update(bodyString)
+  .digest('hex');
+
+const payload = { ...body, signature };
+
+await fetch(`${process.env.SSO_WEBHOOK_URL}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+});
+```
+
+<Warning>
+`WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser idênticos. O evento real é `purchase.completed` — não `subscription.activated`.
+</Warning>
 
 **Respostas:**
 
@@ -118,72 +148,16 @@ export async function POST(request: NextRequest) {
 
 ---
 
-## GET /api/me
+## GET /api/plans/public
 
-Retorna os dados do perfil do usuário autenticado. Requer Bearer token válido.
-
-**Headers:**
-
-```
-Authorization: Bearer <access_token>
-```
+Retorna os planos disponíveis para compra. Endpoint público, sem autenticação.
 
 **Resposta 200:**
 
 ```json
-{
-  "id": "uuid-do-usuario",
-  "email": "usuario@email.com",
-  "name": "João Silva",
-  "avatar_url": "https://..."
-}
+[
+  { "slug": "easy-standard", "name": "Easy Standard", "price": 9900 },
+  { "slug": "easy-pro",      "name": "Easy Pro",      "price": 19900 },
+  { "slug": "easy-enterprise","name": "Easy Enterprise","price": 49900 }
+]
 ```
-
-**Implementação:**
-
-```ts
-// src/app/api/me/route.ts (no projeto SSO)
-import { jwtVerify } from 'jose';
-import { NextResponse, type NextRequest } from 'next/server';
-
-const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization');
-  const token = authHeader?.replace('Bearer ', '');
-
-  if (!token) {
-    return NextResponse.json({ error: 'Token ausente' }, { status: 401 });
-  }
-
-  try {
-    const { payload } = await jwtVerify(token, jwtSecret, {
-      issuer: 'sso.easygoal.com.br',
-    });
-
-    const userId = payload.sub!;
-    const user = await getUserById(userId);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Usuario nao encontrado' }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatar_url: user.avatar_url ?? null,
-    });
-  } catch {
-    return NextResponse.json({ error: 'Token invalido ou expirado' }, { status: 401 });
-  }
-}
-```
-
-**Respostas:**
-
-| Status | Descrição |
-|--------|-----------|
-| `200` | Perfil do usuário |
-| `401` | Token ausente, inválido ou expirado |
-| `404` | Usuário não encontrado |

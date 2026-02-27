@@ -1,0 +1,141 @@
+---
+title: "Contexto para LLMs"
+description: "Arquivo de contexto para uso com assistentes de IA (Cursor, Claude, Copilot e outros)."
+---
+
+O repositório da documentação mantém um arquivo `llms.txt` na raiz — um guia estruturado que ensina qualquer assistente de IA sobre a arquitetura, padrões e convenções do ecossistema Easy Goal.
+
+<Note>
+  O Mintlify gera automaticamente `/llms.txt` e `/llms-full.txt` com o conteúdo desta documentação. Acesse diretamente em `https://docs.easygoal.com.br/llms.txt`.
+</Note>
+
+## Para que serve
+
+Ao referenciar esse arquivo em uma sessão de IA, o assistente passa a conhecer:
+
+- Quais projetos existem, suas portas e domínios de produção
+- O fluxo de autenticação cross-domain (SSO → app-front)
+- Os endpoints reais do SSO e o formato dos webhooks
+- As variáveis de ambiente corretas de cada projeto
+- A paleta de cores, tokens CSS e padrões de componente
+- Como instalar e usar `@easygoal/ui` e `@easygoal/auth`
+- As rotas do app-front por perfil (usuário, produtor, admin)
+
+---
+
+## Como usar
+
+### Cursor
+
+Crie ou edite o arquivo `.cursor/rules` (ou `.cursorrules`) na raiz do projeto:
+
+```
+@https://docs.easygoal.com.br/llms.txt
+```
+
+Ou adicione o conteúdo diretamente nas **Project Rules** em _Cursor Settings → Rules_.
+
+### Claude Code
+
+Adicione ao `CLAUDE.md` do projeto:
+
+```markdown
+## Contexto EasyGoal
+
+Leia o guia completo do ecossistema antes de qualquer tarefa:
+https://docs.easygoal.com.br/llms.txt
+```
+
+### GitHub Copilot
+
+Adicione ao `.github/copilot-instructions.md`:
+
+```markdown
+Antes de sugerir código, consulte o contexto do ecossistema:
+https://docs.easygoal.com.br/llms.txt
+```
+
+### Qualquer chat de IA (ChatGPT, Claude, Gemini...)
+
+Cole o conteúdo do arquivo diretamente na primeira mensagem da conversa, ou peça ao assistente para acessar a URL:
+
+```
+Leia este arquivo de contexto antes de responder:
+https://docs.easygoal.com.br/llms.txt
+```
+
+---
+
+## Conteúdo do arquivo
+
+<AccordionGroup>
+  <Accordion title="Ecossistema e projetos">
+    | Projeto | Domínio (prod) | Porta (dev) |
+    |---------|----------------|-------------|
+    | SSO | sso.easygoal.com.br | **3000** |
+    | app-front | app.easygoal.com.br | **3001** |
+    | Docs | docs.easygoal.com.br | 3002 |
+
+    Stack: Next.js 14+ + TypeScript + Supabase nos projetos principais.
+  </Accordion>
+
+  <Accordion title="Fluxo de autenticação">
+    ```
+    [app-front] detecta sem sessão Supabase
+        ↓
+    Redireciona para: {SSO_URL}/auth/login?redirect_to=<callback_url>
+        ↓
+    SSO autentica, obtém access_token + refresh_token
+        ↓
+    SSO redireciona para callback_url com os tokens
+        ↓
+    [app-front /auth/callback] estabelece sessão Supabase local
+        ↓
+    Redireciona para /dashboard
+    ```
+
+    Parâmetro de redirect: `redirect_to` (não `redirect_uri`).
+  </Accordion>
+
+  <Accordion title="Webhook de pagamento">
+    ```
+    POST /api/webhook/payment  (no SSO)
+
+    {
+      "event": "purchase.completed",
+      "customer": { "email", "name", "phone" },
+      "product": { "id", "plan_slug" },
+      "company": { "name", "cnpj" },
+      "signature": "<hmac-sha256-hex>"
+    }
+    ```
+
+    `WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser idênticos.
+  </Accordion>
+
+  <Accordion title="Packages @easygoal">
+    | Package | Conteúdo |
+    |---------|----------|
+    | `@easygoal/ui` | `<Logo />` + tokens de cor |
+    | `@easygoal/auth` | `AuthProvider`, `useAuthSession`, `createCallbackRoute`, `updateSession` |
+
+    ```bash
+    npm install github:easygoal/easygoal-ui#main
+    ```
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Arquivo bruto
+
+O arquivo completo está disponível nos seguintes endereços:
+
+<Columns cols={2}>
+  <Card title="llms.txt (gerado)" icon="robot" href="https://docs.easygoal.com.br/llms.txt">
+    Conteúdo desta documentação formatado para consumo por LLMs.
+  </Card>
+  <Card title="llms-full.txt" icon="file-lines" href="https://docs.easygoal.com.br/llms-full.txt">
+    Versão completa com todo o conteúdo de cada página.
+  </Card>
+</Columns>

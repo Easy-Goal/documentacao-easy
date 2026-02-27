@@ -5,60 +5,87 @@ description: "O serviço de autenticação centralizado do ecossistema EasyGoal.
 
 ## O que é o SSO EasyGoal?
 
-O SSO (Single Sign-On) é o serviço de autenticação centralizado do ecossistema EasyGoal. Ele:
+O SSO (Single Sign-On) é o serviço de autenticação centralizado do ecossistema Easy Goal. Ele:
 
-- Autentica usuários com conta EasyGoal e emite tokens JWT
+- Autentica usuários usando **Supabase Auth** (email/senha + OAuth Google, GitHub, Azure/Microsoft)
+- Emite sessões Supabase que outros apps do ecossistema reutilizam
 - Recebe webhooks do **app-front** quando um pagamento é confirmado
-- Expõe `/api/me` para que apps registrados busquem dados do usuário logado
-- Valida `redirect_uri` para garantir que apenas apps autorizados recebam tokens
+- Redireciona de volta para o app solicitante via parâmetro `redirect_to`
 
-## Variáveis de Ambiente
+## Como funciona a autenticação cross-domain
+
+```
+[app-front] detecta sem sessão Supabase
+    ↓
+Redireciona para SSO: {SSO_URL}/auth/login?redirect_to=<callback_url>
+    ↓
+SSO autentica via Supabase, obtém access_token + refresh_token
+    ↓
+SSO retorna tokens via redirect para callback_url
+    ↓
+[app-front /auth/callback] recebe tokens, estabelece sessão Supabase local
+    ↓
+Redireciona para /dashboard
+```
+
+<Note>
+O parâmetro de redirect é `redirect_to` (não `redirect_uri`). Use sempre `redirect_to` ao construir URLs de redirecionamento para o SSO.
+</Note>
+
+## Integração via @easygoal/auth (recomendado)
+
+Para conectar um app Next.js ao SSO, use o package `@easygoal/auth`. Ele encapsula o `AuthProvider`, callback route, middleware e hook de sessão.
+
+```bash
+npm install github:easygoal/easygoal-ui#main
+```
+
+Veja a documentação completa de instalação e uso em [Monorepo → Setup & Instalação](/monorepo/setup).
+
+## Variáveis de Ambiente do SSO
 
 ```env
-# Secret compartilhado com o app-front para verificar webhooks
-APP_WEBHOOK_SECRET=7a6736e0f173e96935adb481e14668d5efb9340c4e65027ef45fb2eb392117ee
+# Supabase (mesma instância compartilhada com o app-front)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Lista de redirect_uris permitidas (separadas por vírgula)
-ALLOWED_REDIRECT_URIS=https://club.easygoal.com.br/auth/callback,http://localhost:3002/auth/callback
+# URLs
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# JWT para assinar os access_tokens emitidos pelo SSO
-JWT_SECRET=<gerar-outro-segredo-proprio-do-sso>
-JWT_ACCESS_EXPIRES=3600      # 1 hora em segundos
-JWT_REFRESH_EXPIRES=2592000  # 30 dias em segundos
+# Webhook — DEVE ser idêntico ao SSO_WEBHOOK_SECRET do app-front
+WEBHOOK_SECRET=your-webhook-secret-key
+
+# Email
+RESEND_API_KEY=your-resend-api-key
 ```
 
 <Warning>
-O `APP_WEBHOOK_SECRET` deve ser **idêntico** ao `SSO_WEBHOOK_SECRET` configurado no app-front. Qualquer divergência fará com que todos os webhooks sejam rejeitados com status 401.
+`WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser **idênticos**. Qualquer divergência fará com que todos os webhooks sejam rejeitados com status 401.
 </Warning>
 
-## Endpoints Disponíveis
+## Endpoints do SSO
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| `GET` | `/auth/login` | Inicia autenticação com `redirect_uri` e `state` |
-| `POST` | `/api/webhook/payment` | Recebe notificações de pagamento do app-front |
-| `GET` | `/api/me` | Retorna perfil do usuário via Bearer token |
-
-## CORS
-
-O SSO deve aceitar requests de origens autorizadas:
-
-```ts
-// middleware.ts (no projeto SSO)
-const ALLOWED_ORIGINS = [
-  'https://app.easygoal.com.br',
-  'https://club.easygoal.com.br',
-  'http://localhost:3000', // app-front dev
-  'http://localhost:3002', // club dev
-];
-```
+| `GET` | `/auth/login` | Formulário de login — aceita `?redirect_to=<url>` |
+| `GET` | `/auth/signup` | Criar conta |
+| `GET` | `/auth/forgot-password` | Solicitar reset de senha |
+| `GET` | `/auth/reset-password` | Redefinir senha (via link de email) |
+| `GET/POST` | `/auth/callback` | Callback OAuth do Supabase |
+| `POST` | `/auth/signout` | Logout — invalida sessão Supabase |
+| `GET` | `/auth/error` | Página de erro de autenticação |
+| `GET` | `/complete-profile` | Completar perfil após OAuth |
+| `GET` | `/dashboard` | Dashboard do usuário no SSO |
+| `POST` | `/api/webhook/payment` | Recebe notificação de compra (HMAC SHA256) |
+| `GET` | `/api/webhook/payment` | Health check do endpoint |
+| `GET` | `/api/plans/public` | Planos disponíveis (público) |
 
 ## Checklist do SSO
 
-<Check>Configurar `APP_WEBHOOK_SECRET` (= `SSO_WEBHOOK_SECRET` do app-front)</Check>
-<Check>Configurar `ALLOWED_REDIRECT_URIS` com a URL do Club LP</Check>
-<Check>Implementar `POST /api/webhook/payment` com verificação HMAC</Check>
-<Check>Garantir que `GET /auth/login` valida `redirect_uri` antes de aceitar</Check>
-<Check>Implementar `GET /api/me` com validação JWT</Check>
-<Check>Configurar CORS para aceitar `app.easygoal.com.br` e `club.easygoal.com.br`</Check>
+<Check>Configurar `WEBHOOK_SECRET` (= `SSO_WEBHOOK_SECRET` do app-front)</Check>
+<Check>Configurar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`</Check>
+<Check>Adicionar URLs de redirect em Supabase → Auth → URL Configuration</Check>
+<Check>Registrar URLs de callback em Supabase → Auth → Redirect URLs</Check>
+<Check>Implementar `POST /api/webhook/payment` com verificação HMAC SHA256</Check>
 <Check>Testar webhook com o botão "Testar Webhook" no admin do app-front</Check>
