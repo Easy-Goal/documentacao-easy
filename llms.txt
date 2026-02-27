@@ -426,7 +426,7 @@ O monorepo `easygoal-ui` (github.com/easygoal/easygoal-ui) exporta dois packages
 
 ```bash
 # Via GitHub (recomendado enquanto não publicado no npm)
-npm install github:easygoal/easygoal-ui#main
+npm install "https://github.com/Easy-Goal/easygoal-ui#main"
 
 # Via path local (desenvolvimento com monorepo clonado)
 npm install ../easygoal-ui/packages/ui
