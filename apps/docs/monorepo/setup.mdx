@@ -22,17 +22,17 @@ Há três formas de instalar os packages do monorepo. Escolha a que se encaixa m
     O npm resolve o package usando o `package.json` na raiz. Para instalar um sub-package específico do monorepo, aponte para o diretório correto via `package.json#exports` ou use um path local.
 
     <Note>
-    Para instalar um sub-package específico (`@easygoal/ui` ou `@easygoal/auth`) via GitHub, adicione ao `package.json` do seu projeto:
+    Para instalar os packages via GitHub, adicione ao `package.json` do seu projeto:
 
     ```json
     {
       "dependencies": {
-        "@easygoal/ui": "github:easygoal/easygoal-ui#main"
+        "@easygoal/packages": "github:Easy-Goal/easygoal-monorepo"
       }
     }
     ```
 
-    Em seguida configure o `package.json` do seu projeto para apontar ao diretório correto usando `.npmrc` ou pnpm catalog — veja a aba "Configuração avançada".
+    Em seguida rode `npm install` ou `pnpm install`.
     </Note>
   </Tab>
 
@@ -41,29 +41,29 @@ Há três formas de instalar os packages do monorepo. Escolha a que se encaixa m
 
     ```bash
     # Clonar o monorepo
-    git clone https://github.com/easygoal/easygoal-ui.git ~/projects/easy/easygoal-ui
+    git clone https://github.com/Easy-Goal/easygoal-monorepo.git ~/projects/easy/easygoal-monorepo
 
     # No projeto onde vai usar
     cd ~/projects/easy/app-front
 
     # Instalar os packages pelo path relativo
-    npm install ../easygoal-ui/packages/ui
-    npm install ../easygoal-ui/packages/auth
+    npm install ../easygoal-monorepo/packages/ui
+    npm install ../easygoal-monorepo/packages/auth
     ```
 
     <Tip>
     Com pnpm, use o protocolo `workspace:` se você trabalhar com os projetos dentro do mesmo workspace, ou `link:` para paths locais fora do workspace:
 
     ```bash
-    pnpm add link:../easygoal-ui/packages/ui
-    pnpm add link:../easygoal-ui/packages/auth
+    pnpm add link:../easygoal-monorepo/packages/ui
+    pnpm add link:../easygoal-monorepo/packages/auth
     ```
     </Tip>
 
     Rode o build do package em modo watch em um terminal separado:
 
     ```bash
-    cd ~/projects/easy/easygoal-ui
+    cd ~/projects/easy/easygoal-monorepo
     pnpm build:ui   # ou pnpm build:auth
     # modo watch:
     pnpm --filter @easygoal/ui run dev
@@ -99,7 +99,7 @@ Há três formas de instalar os packages do monorepo. Escolha a que se encaixa m
 ## Usando @easygoal/ui
 
 ```tsx
-import { Logo, colors } from "@easygoal/ui";
+import { Logo, colors } from "@easygoal/packages/ui";
 
 // Logo no tema escuro (texto branco, ícone laranja)
 <Logo variant="dark" width={133} />
@@ -115,7 +115,7 @@ const accent = colors.primary;  // "#F97316"
 Importando apenas os tokens (sem carregar o componente React):
 
 ```ts
-import { colors, cssVars } from "@easygoal/ui/tokens";
+import { colors, cssVars } from "@easygoal/packages/ui/tokens";
 ```
 
 ---
@@ -124,16 +124,16 @@ import { colors, cssVars } from "@easygoal/ui/tokens";
 
 O `@easygoal/auth` é específico para projetos **Next.js + Supabase** que integram com o SSO Easy Goal.
 
-### 1. AuthProvider (layout raiz)
+### 1. EgSessionProvider (layout raiz)
 
 ```tsx
 // app/layout.tsx
-import { AuthProvider } from "@easygoal/auth";
+import { EgSessionProvider } from "@easygoal/packages/auth";
 import { createClient } from "@/utils/supabase/client";
 
 export default function RootLayout({ children }) {
   return (
-    <AuthProvider
+    <EgSessionProvider
       config={{
         loginUrl: process.env.NEXT_PUBLIC_SSO_URL!,
         appUrl: process.env.NEXT_PUBLIC_APP_URL!,
@@ -141,7 +141,7 @@ export default function RootLayout({ children }) {
       supabaseClient={createClient()}
     >
       {children}
-    </AuthProvider>
+    </EgSessionProvider>
   );
 }
 ```
@@ -150,7 +150,7 @@ export default function RootLayout({ children }) {
 
 ```ts
 // app/auth/callback/route.ts
-import { createCallbackRoute } from "@easygoal/auth";
+import { createCallbackRoute } from "@easygoal/packages/auth";
 
 export const GET = createCallbackRoute({
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -164,7 +164,7 @@ export const GET = createCallbackRoute({
 
 ```ts
 // middleware.ts
-import { updateSession, defaultMatcherConfig } from "@easygoal/auth";
+import { updateSession, defaultMatcherConfig } from "@easygoal/packages/auth";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
@@ -181,7 +181,7 @@ export const config = defaultMatcherConfig;
 
 ```tsx
 "use client";
-import { useAuthSession } from "@easygoal/auth";
+import { useAuthSession } from "@easygoal/packages/auth";
 
 export function Header() {
   const { session, signOut, isReady } = useAuthSession();
@@ -206,8 +206,8 @@ export function Header() {
 npm install -g pnpm
 
 # Clonar
-git clone https://github.com/easygoal/easygoal-ui.git
-cd easygoal-ui
+git clone https://github.com/Easy-Goal/easygoal-monorepo.git
+cd easygoal-monorepo
 
 # Instalar dependências de todos os packages
 pnpm install

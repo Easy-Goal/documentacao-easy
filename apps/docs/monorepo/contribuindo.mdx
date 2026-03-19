@@ -1,0 +1,112 @@
+---
+title: "Contribuindo com o Monorepo"
+description: "Como adicionar componentes ao @easygoal/ui, buildar e commitar corretamente."
+---
+
+## Visão Geral
+
+O monorepo (`easygoal-monorepo`) contém packages npm públicos. Qualquer adição deve manter a qualidade e consistência com os packages existentes.
+
+<Warning>
+O monorepo é público. Nunca commite secrets, migrations SQL ou arquivos de contexto de produto aqui.
+</Warning>
+
+## Adicionando um componente ao @easygoal/ui
+
+### 1. Crie o componente
+
+```bash
+# Estrutura esperada
+packages/ui/src/components/MeuComponente/
+├── MeuComponente.tsx
+└── index.ts
+```
+
+O componente deve usar **CVA** para variantes e **Tailwind** para estilos:
+
+```tsx
+// packages/ui/src/components/MeuComponente/MeuComponente.tsx
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "../../utils";
+
+const meuComponenteVariants = cva("base-classes", {
+  variants: {
+    variant: {
+      default: "...",
+      outline: "...",
+    },
+    size: {
+      sm: "...",
+      md: "...",
+    },
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "md",
+  },
+});
+
+export interface MeuComponenteProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof meuComponenteVariants> {}
+
+export function MeuComponente({ className, variant, size, ...props }: MeuComponenteProps) {
+  return (
+    <div className={cn(meuComponenteVariants({ variant, size }), className)} {...props} />
+  );
+}
+```
+
+### 2. Exporte em index.ts
+
+```ts
+// packages/ui/src/index.ts
+export { MeuComponente } from "./components/MeuComponente";
+export type { MeuComponenteProps } from "./components/MeuComponente";
+```
+
+### 3. Faça o build
+
+O `dist/` **deve estar atualizado** antes de commitar. Builds desatualizados quebram quem instala o package.
+
+```bash
+cd packages/ui
+npm run build
+```
+
+Verifique que `dist/` foi gerado/atualizado antes de continuar.
+
+### 4. Commit
+
+```bash
+# A partir da raiz do monorepo
+git add packages/ui/src/components/MeuComponente
+git add packages/ui/src/index.ts
+git add packages/ui/dist
+git commit -m "feat(ui): adicionar componente MeuComponente"
+```
+
+## Regras de código
+
+| Regra | Detalhe |
+|-------|---------|
+| **TypeScript estrito** | `strict: true` no tsconfig — sem `any` implícito |
+| **CVA para variantes** | Use `class-variance-authority` para variantes de estilo |
+| **Tailwind para estilos** | Sem CSS modules ou styled-components |
+| **Exportar tipos** | Sempre exporte as interfaces/types junto com os componentes |
+| **Sem secrets** | O monorepo é público — nunca commite chaves, tokens ou .env |
+| **Build antes de commitar** | O `dist/` deve estar atualizado no commit |
+
+## Adicionando um novo package
+
+Para criar um package do zero (ex: `@easygoal/types`):
+
+```bash
+# 1. Crie a estrutura
+mkdir -p packages/meu-package/src
+
+# 2. Crie package.json, tsconfig.json e tsup.config.ts
+# Siga o padrão dos packages existentes (@easygoal/ui ou @easygoal/auth)
+```
+
+O pnpm workspace detecta automaticamente novos diretórios em `packages/`.

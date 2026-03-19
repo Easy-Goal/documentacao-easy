@@ -35,6 +35,45 @@ redirect(
 
 ---
 
+## GET /auth/check
+
+Silent auth check para apps externos registrados via API key. Verifica se o usuário já está autenticado no SSO e redireciona com os tokens — sem exibir nenhuma tela de login.
+
+**Query Parameters:**
+
+| Parâmetro | Tipo | Obrigatório | Descrição |
+|-----------|------|-------------|-----------|
+| `api_key` | `string` | Sim | Chave do produto registrado no SSO (`eg_live_...` ou `eg_sandbox_...`) |
+| `redirect_to` | `string` | Sim | URL de callback do app externo. Deve estar nos `redirect_urls` do produto cadastrado. |
+| `next` | `string` | Não | Caminho para redirecionar após o callback (default: `/`) |
+
+**Comportamento:**
+
+- ✅ **Usuário autenticado** → redireciona para `redirect_to?access_token=...&refresh_token=...&next=...`
+- ❌ **Usuário não autenticado** → redireciona para `redirect_to?silent_check=no_session&next=...` (sem forçar login)
+
+<Note>
+O callback do app externo deve usar `handleAuthCallback` de `@easygoal/packages/auth/server`. Ele processa automaticamente os tokens (Method 1) e, quando recebe `silent_check=no_session`, redireciona para `next` sem forçar login.
+</Note>
+
+**Respostas:**
+
+| Status | Descrição |
+|--------|-----------|
+| `302` | Redireciona para `redirect_to` (com ou sem tokens) |
+| `400` | Parâmetros `api_key` ou `redirect_to` ausentes, ou `redirect_to` com formato inválido |
+| `401` | `api_key` inválida, expirada ou revogada |
+| `403` | `redirect_to` não está nos `redirect_urls` cadastrados para o produto |
+
+**Pré-requisitos:**
+1. Produto registrado no SSO com status `approved`
+2. `redirect_to` cadastrado em `saas_products.redirect_urls`
+3. API key ativa para o produto
+
+Veja o fluxo completo em [SSO → Autenticação Cross-Domain](/sso/autenticacao-cross-domain).
+
+---
+
 ## POST /api/webhook/payment
 
 Recebe notificações de compra do app-front, verificadas com HMAC SHA256.

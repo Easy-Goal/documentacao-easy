@@ -1,0 +1,70 @@
+---
+title: "Easy Labs"
+description: "O repositório de orquestração do ecossistema Easy Goal — contexto, memória e runbooks para devs e agentes de IA."
+---
+
+## O que é o Easy Labs
+
+O `easy-labs` é o hub de orquestração do ecossistema Easy Goal. Não contém código de produto — serve como repositório de contexto compartilhado entre desenvolvedores e agentes de IA que trabalham nos projetos.
+
+É o lugar onde ficam:
+
+- **Memória de sessões** — histórico de decisões e o que foi feito em cada sessão
+- **Contexto por repositório** — regras técnicas, stack, padrões e pendências de cada projeto
+- **Roadmap ativo** — o que está em desenvolvimento agora e o que está no backlog
+- **Runbooks** — passo a passo para tarefas recorrentes (migrations, onboarding de repos, etc.)
+- **ADRs** — Architecture Decision Records para decisões técnicas importantes
+
+## Estrutura
+
+```
+easy-labs/
+├── START_HERE.md          ← protocolo de início de sessão
+├── ECOSYSTEM.md           ← mapa dos repositórios
+├── memory/
+│   ├── INDEX.md           ← índice de toda a memória
+│   ├── sessions/          ← histórico por data (YYYY-MM-DD.md)
+│   ├── projects/          ← estado atual por projeto
+│   └── decisions/         ← ADRs numerados
+├── context/
+│   └── [repo]/
+│       ├── CLAUDE.md      ← regras técnicas para agentes de IA
+│       ├── stack.md       ← imports, padrões e convenções de código
+│       └── pending.md     ← lista de pendências do repositório
+├── roadmap/
+│   ├── CURRENT.md         ← etapas ativas
+│   ├── BACKLOG.md         ← próximas etapas
+│   └── DONE.md            ← histórico de etapas concluídas
+└── runbooks/              ← guias de execução de tarefas
+```
+
+## Para quem é
+
+O easy-labs é para **devs e agentes de IA** que trabalham no ecossistema Easy Goal.
+
+- **Devs humanos** — usam o easy-labs para retomar contexto entre sessões, consultar decisões arquiteturais passadas e seguir runbooks para tarefas padronizadas.
+- **Agentes de IA** — leem o easy-labs antes de começar qualquer trabalho para entender regras, padrões e o estado atual do projeto, evitando retrabalho e decisões inconsistentes.
+
+## Como iniciar uma sessão
+
+Ao começar a trabalhar em qualquer repositório do ecossistema:
+
+1. **Leia `START_HERE.md`** — define o protocolo de sessão e o que ler dependendo do contexto
+2. **Leia `roadmap/CURRENT.md`** — confirme o que está ativo
+3. **Leia `context/[repo]/pending.md`** — veja as pendências do repositório que vai trabalhar
+4. **Leia `context/[repo]/CLAUDE.md`** — entenda as regras técnicas antes de codar
+
+## Como encerrar uma sessão
+
+Ao terminar o trabalho:
+
+1. Atualize `context/[repo]/pending.md` — marque o que foi feito, adicione novas pendências
+2. Crie `memory/sessions/YYYY-MM-DD.md` usando o template disponível
+3. Atualize `roadmap/CURRENT.md` se algum item foi concluído
+4. Faça commit das atualizações:
+
+```bash
+cd /path/to/easy-labs
+git add .
+git commit -m "chore: atualizar contexto — sessão YYYY-MM-DD"
+```

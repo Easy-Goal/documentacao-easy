@@ -18,11 +18,11 @@
         "groups": [
           {
             "group": "Visão Geral",
-            "pages": ["index", "introducao/arquitetura", "introducao/llm-context"]
+            "pages": ["index", "introducao/arquitetura", "introducao/ecossistema", "introducao/easy-labs", "introducao/llm-context"]
           },
           {
             "group": "Monorepo",
-            "pages": ["monorepo/estrutura", "monorepo/setup"]
+            "pages": ["monorepo/estrutura", "monorepo/setup", "monorepo/contribuindo"]
           }
         ]
       },
@@ -35,7 +35,7 @@
           },
           {
             "group": "Área do Usuário",
-            "pages": ["app-front/usuario", "app-front/afiliado"]
+            "pages": ["app-front/usuario", "app-front/afiliado", "app-front/roadmap", "app-front/beta-program"]
           },
           {
             "group": "Área do Produtor",
@@ -73,7 +73,8 @@
             "pages": [
               "sso/visao-geral",
               "sso/fluxo-oauth",
-              "sso/endpoints"
+              "sso/endpoints",
+              "sso/autenticacao-cross-domain"
             ]
           },
           {
@@ -103,7 +104,7 @@
       "anchors": [
         {
           "anchor": "Suporte",
-          "href": "mailto:suporte@easygoal.com.br",
+          "href": "mailto:contato@easygoal.com.br",
           "icon": "envelope"
         },
         {
@@ -122,7 +123,7 @@
     "links": [
       {
         "label": "Suporte",
-        "href": "mailto:suporte@easygoal.com.br"
+        "href": "mailto:contato@easygoal.com.br"
       }
     ],
     "primary": {

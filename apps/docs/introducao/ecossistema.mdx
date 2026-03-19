@@ -1,0 +1,61 @@
+---
+title: "Ecossistema Easy Goal"
+description: "Mapa dos repositórios do ecossistema Easy Goal — responsabilidades, dependências e como os projetos se relacionam."
+---
+
+## Visão Geral
+
+O Easy Goal é composto por um conjunto de repositórios independentes que trabalham juntos para entregar a plataforma. Cada repositório tem uma responsabilidade clara e bem definida.
+
+## Repositórios
+
+| Repositório | Status | Responsabilidade | Visibilidade |
+|-------------|--------|------------------|--------------|
+| `app-front` | Ativo | App principal — área do usuário, produtor, afiliado e admin | Privado |
+| `sso` | Ativo | Servidor de autenticação centralizado (SSO + JWT) | Privado |
+| `easygoal-monorepo` | Ativo | Packages npm compartilhados: `@easygoal/ui`, `@easygoal/auth` | Será público |
+| `easy-ia` | Planejado | Assistente IA plugável multi-tenant (EasyGoal = primeiro tenant) | Privado |
+| `site-easygoal` | Aguardando | Site institucional | Privado |
+| `lp-easy-club` | Aguardando | Landing page da comunidade Easy Club | Privado |
+| `documentacao-easygoal` | Ativo | Documentação técnica pública (Mintlify) | Público |
+| `easy-labs` | Ativo | Hub de orquestração + laboratório de IA para devs e agentes | Privado |
+
+## Diagrama de Dependências
+
+```
+sso
+  ↑ depende de: Supabase Auth (email/senha + OAuth)
+  ↓ fornece: cookie eg_session (JWT) para todos os apps
+
+app-front
+  → autentica via: sso
+  → usa: @easygoal/ui, @easygoal/auth (via easygoal-monorepo)
+  → banco: Supabase (projeto compartilhado)
+
+easy-ia (planejado)
+  → autentica via: sso (painel de tenants)
+  → banco: Supabase com pgvector
+  → LLM: Anthropic API (Claude)
+  → EasyGoal = primeiro tenant
+
+easygoal-monorepo
+  → packages consumidos por: app-front, easy-ia, site-easygoal, sso
+  → instalado via: "github:Easy-Goal/easygoal-monorepo"
+```
+
+## Domínios de Produção
+
+| Projeto | Domínio |
+|---------|---------|
+| `app-front` | app.easygoal.com.br |
+| `sso` | sso.easygoal.com.br |
+| `site-easygoal` | easygoal.com.br |
+| `easy-ia` | TBD |
+
+## Como os projetos se relacionam
+
+O **SSO** é o ponto central de autenticação. Qualquer app do ecossistema que precise autenticar usuários redireciona para o SSO, que emite uma sessão Supabase reutilizável via cookie `eg_session`.
+
+O **easygoal-monorepo** centraliza identidade visual e utilitários de autenticação. Ao invés de cada app reimplementar o `<Logo />`, tokens de cor ou o callback de auth, todos consomem os packages compartilhados.
+
+O **easy-labs** não contém código de produto — é o repositório de contexto e orquestração para devs e agentes de IA, mantendo memória, runbooks e roadmap do ecossistema.

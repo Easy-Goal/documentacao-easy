@@ -1,0 +1,180 @@
+---
+title: "Autenticação Cross-Domain"
+description: "Como integrar qualquer app externo ao SSO EasyGoal via API key para detecção silenciosa de sessão."
+---
+
+## Visão Geral
+
+Apps externos (ex: landing pages, sites de parceiros) podem detectar se o usuário já está autenticado no ecossistema EasyGoal **sem redirecionar para uma tela de login**. Isso é feito pelo endpoint `GET /auth/check` usando uma API key que vincula o domínio externo como app autorizado.
+
+```
+[App Externo]  →  [SSO /auth/check?api_key=...]
+                            ↓
+              Usuário logado?
+              ┌─── SIM ────────────────────────────────────┐
+              │   redirect_to?access_token=...             │
+              │            ↓                               │
+              │   [App /auth/callback]                     │
+              │   supabase.auth.setSession(tokens)         │
+              │            ↓                               │
+              │   Sessão estabelecida localmente           │
+              └────────────────────────────────────────────┘
+              ┌─── NÃO ────────────────────────────────────┐
+              │   redirect_to?silent_check=no_session      │
+              │            ↓                               │
+              │   [App /auth/callback]                     │
+              │   Redireciona para / sem forçar login      │
+              └────────────────────────────────────────────┘
+```
+
+## Por que este fluxo?
+
+Cookies do Supabase são scoped por domínio. O SSO seta cookies em `sso.easygoal.com.br` — esses cookies não são acessíveis por um app em `club.easygoal.com.br` ou qualquer outro domínio externo. O endpoint `/auth/check` resolve isso: o browser envia os cookies do SSO naturalmente (mesmo domínio), e o SSO retorna os tokens para o app externo via redirect.
+
+## Setup
+
+### 1. Registrar o produto no SSO
+
+O app externo precisa ser registrado como produto no SSO. Acesse o painel admin e crie um produto com:
+
+- **`redirect_urls`**: lista de URLs de callback autorizadas, ex: `https://club.easygoal.com.br/auth/callback`
+- **`allowed_origins`**: origins autorizadas para CORS (se necessário)
+- **`status`**: deve ser `approved` para usar chaves de produção
+
+### 2. Gerar uma API key
+
+Com o produto registrado, gere uma API key (`eg_live_...` para produção, `eg_sandbox_...` para desenvolvimento).
+
+### 3. Configurar o app externo
+
+```env
+# .env.local (ou variáveis na Vercel)
+NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br
+NEXT_PUBLIC_EASY_API_KEY=eg_live_sua_chave_aqui
+```
+
+<Warning>
+`NEXT_PUBLIC_EASY_API_KEY` fica exposta no bundle do browser — isso é intencional. A API key identifica o app (como um `client_id` em OAuth2), não autentica o usuário. A segurança é garantida pela validação do `redirect_to` contra os `redirect_urls` cadastrados no produto.
+</Warning>
+
+### 4. Implementar o callback route
+
+```ts
+// src/app/auth/callback/route.ts
+import { createCallbackRoute } from '@easygoal/packages/auth/server';
+
+export const GET = createCallbackRoute({
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  ssoUrl: process.env.NEXT_PUBLIC_SSO_URL,
+  appUrl: process.env.NEXT_PUBLIC_APP_URL,
+});
+```
+
+`handleAuthCallback` (usado internamente por `createCallbackRoute`) trata automaticamente:
+- **`access_token` + `refresh_token` na URL** → chama `supabase.auth.setSession()` e estabelece sessão local
+- **`silent_check=no_session`** → redireciona para `next` sem forçar login
+
+### 5. Adicionar o componente de silent check
+
+```tsx
+// src/components/SSOSilentCheck.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { useOptionalSession } from '@/hooks/useOptionalSession';
+
+const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL ?? 'https://sso.easygoal.com.br';
+const EASY_API_KEY = process.env.NEXT_PUBLIC_EASY_API_KEY ?? '';
+const SESSION_KEY = 'eg_sso_check_done';
+
+export function SSOSilentCheck() {
+  const { isReady, user } = useOptionalSession();
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (user) return;
+    if (!EASY_API_KEY) return;
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+
+    sessionStorage.setItem(SESSION_KEY, '1');
+
+    const callbackUrl = `${window.location.origin}/auth/callback`;
+    const checkUrl = new URL(`${SSO_URL}/auth/check`);
+    checkUrl.searchParams.set('api_key', EASY_API_KEY);
+    checkUrl.searchParams.set('redirect_to', callbackUrl);
+    checkUrl.searchParams.set('next', '/');
+
+    window.location.href = checkUrl.toString();
+  }, [isReady, user]);
+
+  return null;
+}
+```
+
+Adicione ao layout raiz:
+
+```tsx
+// src/app/layout.tsx
+import { SSOSilentCheck } from '@/components/SSOSilentCheck';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <SSOSilentCheck />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+## Como funciona o `sessionStorage`
+
+O `sessionStorage` garante que o redirect para o SSO aconteça **apenas uma vez por aba** do browser:
+
+| Situação | Comportamento |
+|----------|---------------|
+| Primeira visita, usuário logado no SSO | Redirect → SSO → callback com tokens → sessão estabelecida |
+| Primeira visita, usuário não logado | Redirect → SSO → callback com `silent_check=no_session` → sem sessão |
+| Visitas seguintes (mesma aba) | `sessionStorage` já tem a flag → não redireciona |
+| Nova aba / novo browser | `sessionStorage` resetado → faz o check novamente |
+
+## Leitura de sessão no app
+
+```ts
+// src/hooks/useOptionalSession.ts
+import { useEffect, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
+
+export function useOptionalSession() {
+  const [state, setState] = useState({ session: null, user: null, isReady: false });
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setState({ session, user: session ? extractUser(session) : null, isReady: true });
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState({ session, user: session ? extractUser(session) : null, isReady: true });
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  return state;
+}
+```
+
+## Checklist de Integração
+
+<Check>Produto registrado no SSO com `status: approved`</Check>
+<Check>URL do callback (`/auth/callback`) cadastrada em `saas_products.redirect_urls`</Check>
+<Check>API key gerada e configurada em `NEXT_PUBLIC_EASY_API_KEY`</Check>
+<Check>Callback route implementado com `createCallbackRoute` de `@easygoal/packages/auth/server`</Check>
+<Check>Componente `SSOSilentCheck` adicionado ao layout raiz</Check>
+<Check>URL do callback cadastrada em **Supabase → Auth → Redirect URLs**</Check>
+<Check>Variáveis `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SSO_URL` configuradas na Vercel</Check>
