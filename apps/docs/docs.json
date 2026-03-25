@@ -39,7 +39,7 @@
           },
           {
             "group": "Área do Produtor",
-            "pages": ["app-front/produtor"]
+            "pages": ["app-front/produtor", "app-front/produtor/squad", "app-front/produtor/cobranca"]
           },
           {
             "group": "Área Admin",

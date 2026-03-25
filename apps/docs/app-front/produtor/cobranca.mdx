@@ -1,0 +1,68 @@
+---
+title: "Planos & Cobrança"
+description: "Configure preços, ciclos de cobrança e métodos de pagamento para seus produtos SaaS via AbacatePay."
+---
+
+## Visão geral
+
+O sistema de cobrança da Easy Goal usa o **AbacatePay** como gateway de pagamento. Cada produto tem sua configuração de billing armazenada na tabela `saas_product_billing`.
+
+---
+
+## Configurar cobrança de um produto
+
+Acesse **Produtos → [Produto] → aba "Cobrança"** e defina:
+
+| Campo | Descrição | Exemplo |
+|---|---|---|
+| **Preço base** | Valor em centavos | `9700` = R$ 97,00 |
+| **Ciclo de cobrança** | `monthly`, `yearly`, `one_time` | `monthly` |
+| **Trial** | Dias gratuitos antes da primeira cobrança | `7` |
+| **Moeda** | ISO 4217 | `BRL` |
+
+<Info>
+  Um produto pode ter **múltiplos planos** de cobrança (ex: mensal + anual). Cada plano é uma entrada separada em `saas_product_billing`.
+</Info>
+
+---
+
+## Ciclos disponíveis
+
+| Ciclo | Valor `billing_cycle` | Descrição |
+|---|---|---|
+| Mensal | `monthly` | Cobrança recorrente todo mês |
+| Anual | `yearly` | Cobrança única anual (geralmente com desconto) |
+| Pagamento único | `one_time` | Sem recorrência |
+
+---
+
+## Vídeo explicativo
+
+{/* <iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/VIDEO_ID?rel=0"
+  title="Como configurar cobrança do produto"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+  style={{ borderRadius: '12px' }}
+/> */}
+
+<Note>Vídeo explicativo em breve.</Note>
+
+---
+
+## Pré-requisitos
+
+<Steps>
+  <Step title="Conta AbacatePay">
+    Configure sua conta em **Configurações → Pagamentos**. Você precisará do `abacatepay_account_id` e `abacatepay_email`.
+  </Step>
+  <Step title="Chave PIX">
+    Necessária para receber saques do seu saldo. Cadastre em **Configurações → Pagamentos**.
+  </Step>
+  <Step title="Produto aprovado">
+    O checkout só fica ativo após o produto ser aprovado pela equipe Easy Goal.
+  </Step>
+</Steps>

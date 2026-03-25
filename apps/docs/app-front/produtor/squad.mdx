@@ -1,0 +1,107 @@
+---
+title: "Equipe & Co-produção"
+description: "Convide co-produtores para seus produtos SaaS, defina equity de cada membro e entenda como o split de pagamento é distribuído automaticamente."
+---
+
+## O que é o Squad?
+
+Cada produto SaaS pode ter uma equipe (Squad) composta por:
+
+- **Owner** — o produtor que criou o produto. Tem controle total e recebe o saldo restante dos 80% após os co-produtores
+- **Co-produtores** — membros convidados com percentual de equity definido. Recebem exatamente seu `equity_percent` de cada pagamento
+
+<Info>
+  A plataforma Easy Goal sempre retém **20%** de cada pagamento como taxa de serviço. Os 80% restantes são distribuídos entre owner e co-produtores conforme o equity configurado.
+</Info>
+
+---
+
+## Como convidar um co-produtor
+
+1. Vá para **Produtos → selecione o produto → aba "Squad"**
+2. Clique em **"Convidar co-produtor"**
+3. Insira o e-mail do convidado e defina o **equity em %** (ex: `30` = 30% do valor bruto)
+4. O convidado recebe um link de convite por e-mail e notificação na plataforma
+5. Após aceitar, o co-produtor passa a receber o split a partir do próximo pagamento
+
+<Warning>
+  O convite expira em **7 dias**. Se não for aceito, um novo convite pode ser enviado.
+</Warning>
+
+---
+
+## Como funciona o split de pagamento
+
+A cada pagamento confirmado, o valor é automaticamente dividido:
+
+| Destinatário | Cálculo | Exemplo (R$ 100) |
+|---|---|---|
+| **Plataforma EasyGoal** | `gross × 20%` | R$ 20,00 |
+| **Co-produtor** | `gross × equity_percent / 100` | R$ 30,00 (30%) |
+| **Owner** | `gross × (80% − soma equity co-prod)` | R$ 50,00 |
+
+<Frame>
+  <img src="/images/squad-split-diagram.png" alt="Diagrama de split do squad" />
+</Frame>
+
+### Regras do split
+
+- O total de equity dos co-produtores **não pode ultrapassar 80%**
+- O owner sempre recebe o **restante do pool de 80%** após os co-produtores
+- Apenas membros com **aceite confirmado** entram no split — convites pendentes não contam
+- Co-produtores **removidos** não recebem split de pagamentos futuros
+- Equity alterado aplica apenas para **pagamentos futuros** (não retroativo)
+
+---
+
+## Vídeo explicativo
+
+{/* Substitua VIDEO_ID pelo ID real do YouTube quando o vídeo estiver disponível */}
+{/* <iframe
+  width="100%"
+  height="400"
+  src="https://www.youtube.com/embed/VIDEO_ID?rel=0"
+  title="Como configurar equipe de co-produção"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+  style={{ borderRadius: '12px' }}
+/> */}
+
+<Note>
+  Vídeo explicativo em breve. Enquanto isso, siga o guia acima ou entre em contato com o suporte.
+</Note>
+
+---
+
+## Saldo e saques
+
+Cada membro do squad tem seu próprio saldo separado em `partner_balance_entries`. O saldo fica **disponível para saque 3 dias após o próximo vencimento** da assinatura (margem de segurança contra chargebacks).
+
+Para sacar, acesse: **Configurações → Pagamentos → Solicitar Saque**
+
+<Warning>
+  Todos os membros do squad precisam ter uma **chave PIX cadastrada** em Configurações → Pagamentos para receber o split. Sem chave PIX, o saldo fica retido até ser configurado.
+</Warning>
+
+---
+
+## Perguntas frequentes
+
+<AccordionGroup>
+  <Accordion title="Um co-produtor pode criar produtos próprios?">
+    Sim. Ser co-produtor em um produto não impede o usuário de criar e gerenciar produtos próprios como owner. Os produtos aparecem separados na lista "Meus Produtos".
+  </Accordion>
+
+  <Accordion title="Posso ter co-produtores em múltiplos produtos?">
+    Sim. Cada produto tem seu próprio squad independente. Um usuário pode ser owner de um produto e co-produtor em outro, com equities diferentes em cada.
+  </Accordion>
+
+  <Accordion title="O que acontece se eu remover um co-produtor?">
+    Pagamentos já processados não são alterados. A partir da remoção, o co-produtor não recebe split dos próximos pagamentos. O equity dele volta para o owner automaticamente.
+  </Accordion>
+
+  <Accordion title="O admin pode alterar o squad de qualquer produto?">
+    Sim. Administradores da plataforma podem adicionar, remover e alterar equity de qualquer membro em qualquer produto, inclusive trocar o owner.
+  </Accordion>
+</AccordionGroup>
