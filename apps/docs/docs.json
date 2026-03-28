@@ -56,21 +56,6 @@
         ]
       },
       {
-        "tab": "Para Produtores",
-        "groups": [
-          {
-            "group": "Steps do Produto SaaS",
-            "pages": [
-              "typebot/visao-geral",
-              "typebot/step-1-dados-basicos",
-              "typebot/step-2-sso",
-              "typebot/step-3-pagamentos",
-              "typebot/step-4-testes"
-            ]
-          }
-        ]
-      },
-      {
         "tab": "SSO & Club LP",
         "groups": [
           {
