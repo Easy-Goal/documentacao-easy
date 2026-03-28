@@ -1,180 +1,151 @@
 ---
 title: "Autenticação Cross-Domain"
-description: "Como integrar qualquer app externo ao SSO EasyGoal via API key para detecção silenciosa de sessão."
+description: "Como integrar apps externos ao SSO EasyGoal via eg_session e eg_token."
 ---
 
 ## Visão Geral
 
-Apps externos (ex: landing pages, sites de parceiros) podem detectar se o usuário já está autenticado no ecossistema EasyGoal **sem redirecionar para uma tela de login**. Isso é feito pelo endpoint `GET /auth/check` usando uma API key que vincula o domínio externo como app autorizado.
+O SSO distribui autenticação para apps em outros domínios de duas formas:
+
+| Cenário | Mecanismo | Quando usar |
+|---------|-----------|-------------|
+| **App interno** (subdomínio `.easygoal.com.br`) | `?eg_session=<token>` no redirect | app-front, club LP, sites internos |
+| **App externo** (domínio externo, API key obrigatória) | `?eg_token=<token>` + `POST /auth/verify` | parceiros, integrações terceiras |
+
+O browser envia o cookie `eg_session` (setado em `.easygoal.com.br`) naturalmente para todos os subdomínios — o SSO apenas replica o token para apps que não alcançam o cookie.
+
+---
+
+## App Interno — Fluxo com `eg_session`
 
 ```
-[App Externo]  →  [SSO /auth/check?api_key=...]
-                            ↓
-              Usuário logado?
-              ┌─── SIM ────────────────────────────────────┐
-              │   redirect_to?access_token=...             │
-              │            ↓                               │
-              │   [App /auth/callback]                     │
-              │   supabase.auth.setSession(tokens)         │
-              │            ↓                               │
-              │   Sessão estabelecida localmente           │
-              └────────────────────────────────────────────┘
-              ┌─── NÃO ────────────────────────────────────┐
-              │   redirect_to?silent_check=no_session      │
-              │            ↓                               │
-              │   [App /auth/callback]                     │
-              │   Redireciona para / sem forçar login      │
-              └────────────────────────────────────────────┘
+[App] → SSO /auth/login?redirect_to=https://app.easygoal.com.br/auth/callback
+    ↓
+SSO autentica → seta cookie eg_session em .easygoal.com.br
+    ↓
+SSO /auth/welcome → redirect para https://app.easygoal.com.br/auth/callback?eg_session=<token>
+    ↓
+App /auth/callback: handleAuthCallback → salva eg_session no cookie local → redirect
 ```
 
-## Por que este fluxo?
-
-Cookies do Supabase são scoped por domínio. O SSO seta cookies em `sso.easygoal.com.br` — esses cookies não são acessíveis por um app em `club.easygoal.com.br` ou qualquer outro domínio externo. O endpoint `/auth/check` resolve isso: o browser envia os cookies do SSO naturalmente (mesmo domínio), e o SSO retorna os tokens para o app externo via redirect.
-
-## Setup
-
-### 1. Registrar o produto no SSO
-
-O app externo precisa ser registrado como produto no SSO. Acesse o painel admin e crie um produto com:
-
-- **`redirect_urls`**: lista de URLs de callback autorizadas, ex: `https://club.easygoal.com.br/auth/callback`
-- **`allowed_origins`**: origins autorizadas para CORS (se necessário)
-- **`status`**: deve ser `approved` para usar chaves de produção
-
-### 2. Gerar uma API key
-
-Com o produto registrado, gere uma API key (`eg_live_...` para produção, `eg_sandbox_...` para desenvolvimento).
-
-### 3. Configurar o app externo
-
-```env
-# .env.local (ou variáveis na Vercel)
-NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br
-NEXT_PUBLIC_EASY_API_KEY=eg_live_sua_chave_aqui
-```
-
-<Warning>
-`NEXT_PUBLIC_EASY_API_KEY` fica exposta no bundle do browser — isso é intencional. A API key identifica o app (como um `client_id` em OAuth2), não autentica o usuário. A segurança é garantida pela validação do `redirect_to` contra os `redirect_urls` cadastrados no produto.
-</Warning>
-
-### 4. Implementar o callback route
+**Setup mínimo:**
 
 ```ts
 // src/app/auth/callback/route.ts
 import { createCallbackRoute } from '@easygoal/packages/auth/server';
 
 export const GET = createCallbackRoute({
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   ssoUrl: process.env.NEXT_PUBLIC_SSO_URL,
   appUrl: process.env.NEXT_PUBLIC_APP_URL,
 });
 ```
 
-`handleAuthCallback` (usado internamente por `createCallbackRoute`) trata automaticamente:
-- **`access_token` + `refresh_token` na URL** → chama `supabase.auth.setSession()` e estabelece sessão local
-- **`silent_check=no_session`** → redireciona para `next` sem forçar login
-
-### 5. Adicionar o componente de silent check
-
 ```tsx
-// src/components/SSOSilentCheck.tsx
-'use client';
-
-import { useEffect } from 'react';
-import { useOptionalSession } from '@/hooks/useOptionalSession';
-
-const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL ?? 'https://sso.easygoal.com.br';
-const EASY_API_KEY = process.env.NEXT_PUBLIC_EASY_API_KEY ?? '';
-const SESSION_KEY = 'eg_sso_check_done';
-
-export function SSOSilentCheck() {
-  const { isReady, user } = useOptionalSession();
-
-  useEffect(() => {
-    if (!isReady) return;
-    if (user) return;
-    if (!EASY_API_KEY) return;
-    if (sessionStorage.getItem(SESSION_KEY)) return;
-
-    sessionStorage.setItem(SESSION_KEY, '1');
-
-    const callbackUrl = `${window.location.origin}/auth/callback`;
-    const checkUrl = new URL(`${SSO_URL}/auth/check`);
-    checkUrl.searchParams.set('api_key', EASY_API_KEY);
-    checkUrl.searchParams.set('redirect_to', callbackUrl);
-    checkUrl.searchParams.set('next', '/');
-
-    window.location.href = checkUrl.toString();
-  }, [isReady, user]);
-
-  return null;
-}
-```
-
-Adicione ao layout raiz:
-
-```tsx
-// src/app/layout.tsx
-import { SSOSilentCheck } from '@/components/SSOSilentCheck';
+// layout.tsx
+import { EgSessionProvider } from '@easygoal/packages/auth/client';
 
 export default function RootLayout({ children }) {
-  return (
-    <html>
-      <body>
-        <SSOSilentCheck />
-        {children}
-      </body>
-    </html>
-  );
+  return <EgSessionProvider>{children}</EgSessionProvider>;
 }
 ```
 
-## Como funciona o `sessionStorage`
+O `EgSessionProvider` lê `/api/auth/session` (rota gerada pelo package) que retorna os claims do `eg_session` cookie.
 
-O `sessionStorage` garante que o redirect para o SSO aconteça **apenas uma vez por aba** do browser:
+---
 
-| Situação | Comportamento |
-|----------|---------------|
-| Primeira visita, usuário logado no SSO | Redirect → SSO → callback com tokens → sessão estabelecida |
-| Primeira visita, usuário não logado | Redirect → SSO → callback com `silent_check=no_session` → sem sessão |
-| Visitas seguintes (mesma aba) | `sessionStorage` já tem a flag → não redireciona |
-| Nova aba / novo browser | `sessionStorage` resetado → faz o check novamente |
+## App Externo — Fluxo com `eg_token`
 
-## Leitura de sessão no app
+Para apps em domínios externos (sem acesso ao cookie `.easygoal.com.br`):
+
+```
+[App Externo] → SSO /auth/login?redirect_to=<callback>&api_key=<chave>
+    ↓
+SSO autentica → redirect_to?eg_token=<token_temporário_5min>
+    ↓
+App /auth/callback (server-side):
+  POST /auth/verify (Authorization: Bearer <api_key>, body: { token: eg_token })
+  → retorna eg_session JWT
+  → salva eg_session no cookie local
+    ↓
+Redirect para destino final
+```
+
+**Setup:**
 
 ```ts
-// src/hooks/useOptionalSession.ts
-import { useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
+// src/app/auth/callback/route.ts
+import { createCallbackRoute } from '@easygoal/packages/auth/server';
 
-export function useOptionalSession() {
-  const [state, setState] = useState({ session: null, user: null, isReady: false });
+export const GET = createCallbackRoute({
+  ssoUrl: process.env.NEXT_PUBLIC_SSO_URL,
+  appUrl: process.env.NEXT_PUBLIC_APP_URL,
+  apiKey: process.env.EG_API_KEY, // obrigatório para apps externos
+});
+```
 
-  useEffect(() => {
-    const supabase = createClient();
+```env
+NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br
+NEXT_PUBLIC_APP_URL=https://meuapp.com
+EG_API_KEY=eg_live_sua_chave_aqui
+```
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setState({ session, user: session ? extractUser(session) : null, isReady: true });
-    });
+<Warning>
+`EG_API_KEY` é usada server-side em `POST /auth/verify`. Nunca exponha como `NEXT_PUBLIC_`. Para apps que precisam iniciar o login via client, use apenas a URL pública do SSO — o `api_key` só é necessário no callback server-side.
+</Warning>
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState({ session, user: session ? extractUser(session) : null, isReady: true });
-    });
+### Pré-requisitos para apps externos
 
-    return () => subscription.unsubscribe();
-  }, []);
+1. Produto registrado no SSO com `status: approved`
+2. URL do callback cadastrada em `saas_products.redirect_urls`
+3. API key ativa para o produto
 
-  return state;
+---
+
+## Verificar sessão server-side
+
+Para proteger rotas ou verificar autenticação em Server Components/middleware:
+
+```ts
+// Opção A: via GET /auth/check (lê cookie eg_session da requisição)
+const res = await fetch(`${SSO_URL}/auth/check`, {
+  headers: { cookie: request.headers.get('cookie') ?? '' },
+  cache: 'no-store',
+});
+const { authenticated, session } = await res.json();
+
+// Opção B: via EgSessionProvider (client-side)
+const { user, isReady } = useEgSession();
+```
+
+O `/auth/check` é ideal para **middleware de proteção de rotas** — não redireciona, apenas retorna JSON com `{ authenticated, session }`.
+
+---
+
+## Proteção de páginas admin via `auth/check`
+
+<Note>
+**Funcionalidade planejada.** Para proteger páginas da documentação (ou qualquer app) exclusivamente para administradores, seria necessário adicionar `is_super_admin` ao `EgSessionClaims` no SSO. O campo existe em `AuthUser` do monorepo mas ainda não é injetado no `eg_session` JWT. Após essa adição, o middleware pode verificar `session.is_super_admin === true` via `/auth/check`.
+</Note>
+
+Fluxo planejado:
+```ts
+// middleware.ts
+const { authenticated, session } = await checkSession(request);
+
+if (pathname.startsWith('/admin')) {
+  if (!authenticated || !session?.is_super_admin) {
+    return NextResponse.redirect('/');
+  }
 }
 ```
+
+---
 
 ## Checklist de Integração
 
-<Check>Produto registrado no SSO com `status: approved`</Check>
-<Check>URL do callback (`/auth/callback`) cadastrada em `saas_products.redirect_urls`</Check>
-<Check>API key gerada e configurada em `NEXT_PUBLIC_EASY_API_KEY`</Check>
-<Check>Callback route implementado com `createCallbackRoute` de `@easygoal/packages/auth/server`</Check>
-<Check>Componente `SSOSilentCheck` adicionado ao layout raiz</Check>
+<Check>Produto registrado no SSO (apenas para apps externos)</Check>
+<Check>URL do callback cadastrada em `saas_products.redirect_urls`</Check>
+<Check>Callback route implementado com `createCallbackRoute`</Check>
+<Check>`EgSessionProvider` adicionado ao layout raiz</Check>
 <Check>URL do callback cadastrada em **Supabase → Auth → Redirect URLs**</Check>
-<Check>Variáveis `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SSO_URL` configuradas na Vercel</Check>
+<Check>Variáveis `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SSO_URL` configuradas</Check>

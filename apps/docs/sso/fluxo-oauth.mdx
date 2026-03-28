@@ -1,245 +1,105 @@
 ---
 title: "Fluxo OAuth"
-description: "Como o SSO autentica usuários e redireciona com tokens para apps registrados."
+description: "Como o SSO autentica usuários e distribui o eg_session para apps do ecossistema."
 ---
 
 <Note>
-**Dois fluxos de integração existem no ecossistema:**
+**Dois cenários de integração:**
 
-1. **app-front / apps com Supabase** → usar `@easygoal/auth`. O fluxo usa `redirect_to` e sessões Supabase — **não** JWT customizado. Veja [Monorepo → Setup & Instalação](/monorepo/setup).
+1. **Apps internos (app-front, subdomínios `.easygoal.com.br`)** — recebem `?eg_session=<token>` no redirect e salvam o cookie localmente via `handleAuthCallback`.
 
-2. **Apps externos (ex: Club LP) sem Supabase** → usar o fluxo OAuth customizado descrito abaixo com `redirect_uri`, `state` e tokens JWT próprios do SSO.
+2. **Apps externos (outros domínios)** — recebem `?eg_token=<token>` temporário e trocam por `eg_session` via `POST /auth/verify` server-side.
 </Note>
 
-## Visão Geral do Fluxo (Apps Externos)
+## Fluxo Completo
 
 ```
-[App (Club LP)]  →  [SSO /auth/login]  →  [Formulário de login]
-                                                    ↓
-                                         [Usuário se autentica]
-                                                    ↓
-[App /auth/callback] ←── tokens na URL ───  [SSO redireciona]
-         ↓
- [Salva tokens em cookies httpOnly]
-         ↓
- [Redireciona para /profile]
+[App] redireciona para SSO /auth/login?redirect_to=<callback_url>
+    ↓
+SSO: formulário de login / OAuth (Supabase PKCE)
+    ↓
+SSO /auth/callback:
+  - Troca code → sessão Supabase
+  - Cria/valida perfil em users_company
+  - Assina eg_session JWT (SSO_JWT_SECRET, 30 dias)
+  - Seta cookie eg_session em .easygoal.com.br
+  ↓
+  [cross-domain autorizado?]
+  ├── SIM → adiciona ?eg_session=<token> ao redirect_to
+  └── NÃO → redirect_to sem token (usa cookie de domínio)
+    ↓
+SSO /auth/welcome (splash 4s) → redireciona para redirect_to
+    ↓
+[App /auth/callback]:
+  - ?eg_session= presente → salva no cookie local (app interno)
+  - ?eg_token= presente → POST /auth/verify → obtém eg_session → salva cookie
+  - Nenhum → redireciona para SSO login
 ```
 
-## 1. Iniciar Login (App → SSO)
+## Implementar o Callback no App
 
-O app gera um `state` aleatório (CSRF protection), salva em cookie e redireciona ao SSO:
+Use `handleAuthCallback` do package `@easygoal/packages/auth`:
 
 ```ts
-// src/app/auth/login/route.ts (no app — ex: Club LP)
-import { NextResponse, type NextRequest } from 'next/server';
-import { randomBytes } from 'crypto';
+// src/app/auth/callback/route.ts
+import { createCallbackRoute } from '@easygoal/packages/auth/server';
 
-export function GET(_request: NextRequest) {
-  const state = randomBytes(16).toString('hex');
-  const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL!;
-  const clubUrl = process.env.NEXT_PUBLIC_CLUB_URL!;
+export const GET = createCallbackRoute({
+  ssoUrl: process.env.NEXT_PUBLIC_SSO_URL,
+  appUrl: process.env.NEXT_PUBLIC_APP_URL,
+  apiKey: process.env.EG_API_KEY, // apenas para apps externos
+});
+```
 
-  const redirectUri = `${clubUrl}/auth/callback`;
+O handler trata automaticamente os dois cenários (`eg_session` e `eg_token`).
 
-  const loginUrl = new URL(`${ssoUrl}/auth/login`);
-  loginUrl.searchParams.set('redirect_uri', redirectUri);
-  loginUrl.searchParams.set('state', state);
+## Ler a Sessão no App
 
-  const response = NextResponse.redirect(loginUrl.toString());
+```tsx
+// layout.tsx
+import { EgSessionProvider } from '@easygoal/packages/auth/client';
 
-  response.cookies.set('oauth_state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 5, // 5 minutos
-    path: '/',
-  });
-
-  return response;
+export default function RootLayout({ children }) {
+  return <EgSessionProvider>{children}</EgSessionProvider>;
 }
 ```
 
-## 2. Receber Login no SSO
+```tsx
+// qualquer componente
+import { useEgSession } from '@easygoal/packages/auth/client';
 
-O SSO valida o `redirect_uri`, salva em cookie temporário e redireciona para o formulário de login:
-
-```ts
-// src/app/auth/login/route.ts (no projeto SSO)
-import { NextResponse, type NextRequest } from 'next/server';
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const redirectUri = searchParams.get('redirect_uri');
-  const state = searchParams.get('state') ?? '';
-
-  // Validar redirect_uri contra lista de URIs permitidas
-  const allowedUris = (process.env.ALLOWED_REDIRECT_URIS ?? '').split(',').map(u => u.trim());
-  if (!redirectUri || !allowedUris.includes(redirectUri)) {
-    return NextResponse.json({ error: 'redirect_uri nao autorizado' }, { status: 400 });
-  }
-
-  const response = NextResponse.redirect(new URL('/auth/form', request.url));
-
-  response.cookies.set('pending_redirect_uri', redirectUri, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 10,
-    path: '/',
-  });
-
-  response.cookies.set('pending_state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 10,
-    path: '/',
-  });
-
-  return response;
-}
+const { user, isReady } = useEgSession();
+// user: { id, email, name, avatarUrl, isProducer, companyName, rankName, planSlug }
 ```
 
-## 3. Emitir Tokens (SSO → App)
-
-Após o usuário autenticar, o SSO gera tokens JWT e redireciona para o `redirect_uri`:
-
-```ts
-// src/lib/issue-tokens.ts (no projeto SSO)
-import { SignJWT } from 'jose'; // npm install jose
-
-const jwtSecret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-export async function issueAccessToken(userId: string, email: string): Promise<string> {
-  return new SignJWT({ sub: userId, email })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(`${process.env.JWT_ACCESS_EXPIRES ?? 3600}s`)
-    .setIssuer('sso.easygoal.com.br')
-    .sign(jwtSecret);
-}
-
-export async function issueRefreshToken(userId: string): Promise<string> {
-  return new SignJWT({ sub: userId, type: 'refresh' })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(`${process.env.JWT_REFRESH_EXPIRES ?? 2592000}s`)
-    .setIssuer('sso.easygoal.com.br')
-    .sign(jwtSecret);
-}
-
-export function buildCallbackUrl(
-  redirectUri: string,
-  accessToken: string,
-  refreshToken: string,
-  state: string
-): string {
-  const url = new URL(redirectUri);
-  url.searchParams.set('access_token', accessToken);
-  url.searchParams.set('refresh_token', refreshToken);
-  if (state) url.searchParams.set('state', state);
-  return url.toString();
-}
-```
-
-## 4. Callback no App
-
-O app recebe os tokens via query string, valida o `state` e salva em cookies httpOnly:
-
-```ts
-// src/app/auth/callback/route.ts (no app — ex: Club LP)
-import { NextResponse, type NextRequest } from 'next/server';
-
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-
-  const accessToken = searchParams.get('access_token');
-  const refreshToken = searchParams.get('refresh_token');
-  const returnedState = searchParams.get('state');
-  const error = searchParams.get('error');
-
-  if (error) {
-    return NextResponse.redirect(new URL(`/?error=${error}`, request.url));
-  }
-
-  if (!accessToken || !refreshToken) {
-    return NextResponse.redirect(new URL('/?error=missing_tokens', request.url));
-  }
-
-  // Validar state (CSRF)
-  const savedState = request.cookies.get('oauth_state')?.value;
-  if (!savedState || savedState !== returnedState) {
-    return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
-  }
-
-  const response = NextResponse.redirect(new URL('/profile', request.url));
-  response.cookies.delete('oauth_state');
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-  };
-
-  response.cookies.set('access_token', accessToken, {
-    ...cookieOptions,
-    maxAge: 60 * 60, // 1 hora
-  });
-
-  response.cookies.set('refresh_token', refreshToken, {
-    ...cookieOptions,
-    maxAge: 60 * 60 * 24 * 30, // 30 dias
-  });
-
-  return response;
-}
-```
-
-<Note>
-Os tokens são passados como query string na URL de callback. Isso é aceitável pois o callback é imediatamente redirecionado e os tokens são salvos em cookies httpOnly — nunca acessíveis por JavaScript.
-</Note>
+O `EgSessionProvider` lê internamente via `GET /api/auth/session` (que lê o cookie `eg_session` server-side).
 
 ## Complete Profile — NDA Beta
 
-Após o primeiro login via OAuth (ou e-mail/senha), usuários que ainda não completaram o perfil são redirecionados para `/complete-profile` no SSO.
+Após o primeiro login OAuth, usuários sem CPF/CNPJ são redirecionados para `/complete-profile`.
 
-Para usuários do **programa beta**, essa tela inclui um passo adicional de aceite do NDA:
+Para **usuários beta**, a tela inclui aceite do NDA:
 
 <Steps>
   <Step title="Dados básicos">
-    Nome completo e outros campos obrigatórios do perfil.
+    Nome completo, CPF/CNPJ e outros campos obrigatórios.
   </Step>
   <Step title="Aceite do NDA (apenas betas)">
-    Exibido somente se o usuário recebeu um convite beta. O texto do NDA é apresentado e o usuário deve marcar a caixa de aceite. O timestamp, IP e user agent são capturados no servidor e gravados em `beta_users`.
+    Exibido somente se o usuário tem registro em `beta_users`. Timestamp, IP e user agent capturados no servidor e gravados em `beta_users`.
   </Step>
   <Step title="Redirecionamento">
-    Após a conclusão, o SSO redireciona para o `redirect_to` original ou para `/dashboard`.
+    Após salvar: vincula compras guest ao usuário → redireciona para o `redirect_to` original.
   </Step>
 </Steps>
 
-O campo `is_beta` em `profiles` é definido como `true` após o aceite do NDA. Apps podem usar esse claim para exibir recursos exclusivos de beta.
+O claim `is_beta` é definido como `true` no `eg_session` após o aceite.
 
-## Middleware de Proteção
+## Logout
 
 ```ts
-// middleware.ts (no app)
-import { NextResponse, type NextRequest } from 'next/server';
+// POST /auth/signout (no SSO)
+// Limpa o cookie eg_session no domínio .easygoal.com.br
 
-export function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get('access_token')?.value;
-  const { pathname } = request.nextUrl;
-
-  if (pathname.startsWith('/profile')) {
-    if (!accessToken) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
-    }
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: ['/profile/:path*'],
-};
+// No app, redirecionar para:
+const signoutUrl = `${SSO_URL}/auth/signout?redirect_to=${encodeURIComponent(APP_URL)}`;
 ```

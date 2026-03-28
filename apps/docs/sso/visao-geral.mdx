@@ -8,39 +8,63 @@ description: "O serviço de autenticação centralizado do ecossistema EasyGoal.
 O SSO (Single Sign-On) é o serviço de autenticação centralizado do ecossistema Easy Goal. Ele:
 
 - Autentica usuários usando **Supabase Auth** (email/senha + OAuth Google, GitHub, Azure/Microsoft)
-- Emite sessões Supabase que outros apps do ecossistema reutilizam
+- Emite um cookie `eg_session` (JWT assinado) compartilhável em subdomínios `.easygoal.com.br`
+- Injeta `?eg_session=<token>` nos redirects cross-domain para apps internos autorizados
+- Para apps externos: emite um `eg_token` temporário trocável via `POST /auth/verify`
 - Recebe webhooks do **app-front** quando um pagamento é confirmado
-- Redireciona de volta para o app solicitante via parâmetro `redirect_to`
 
-## Como funciona a autenticação cross-domain
+## Fluxo resumido
 
 ```
-[app-front] detecta sem sessão Supabase
+[Usuário acessa app]
     ↓
-Redireciona para SSO: {SSO_URL}/auth/login?redirect_to=<callback_url>
+App detecta sem sessão → redireciona para SSO /auth/login?redirect_to=<callback>
     ↓
-SSO autentica via Supabase, obtém access_token + refresh_token
+SSO autentica via Supabase (PKCE)
     ↓
-SSO retorna tokens via redirect para callback_url
+/auth/callback: cria/valida perfil, assina eg_session, seta cookie httpOnly
     ↓
-[app-front /auth/callback] recebe tokens, estabelece sessão Supabase local
+/auth/welcome: tela de splash (4s)
     ↓
-Redireciona para /dashboard
+Redirect para redirect_to com ?eg_session=<token> (se cross-domain autorizado)
+    ↓
+App /auth/callback: salva eg_session no cookie local → redireciona para destino final
 ```
 
 <Note>
-O parâmetro de redirect é `redirect_to` (não `redirect_uri`). Use sempre `redirect_to` ao construir URLs de redirecionamento para o SSO.
+O parâmetro de redirect é `redirect_to` (não `redirect_uri`). Use sempre `redirect_to` ao construir URLs de redirecionamento para o SSO. A URL deve estar cadastrada em **Supabase → Auth → URL Configuration**.
 </Note>
 
-## Integração via @easygoal/auth (recomendado)
+## Cookie `eg_session`
 
-Para conectar um app Next.js ao SSO, use o package `@easygoal/auth`. Ele encapsula o `AuthProvider`, callback route, middleware e hook de sessão.
+O `eg_session` é um JWT assinado com `SSO_JWT_SECRET` e setado em:
+- **`httpOnly: true`** — não acessível por JavaScript
+- **`domain: .easygoal.com.br`** em produção — compartilhado entre todos os subdomínios
 
-```bash
-npm install "https://github.com/Easy-Goal/easygoal-ui#main"
-```
+Claims do `eg_session`:
 
-Veja a documentação completa de instalação e uso em [Monorepo → Setup & Instalação](/monorepo/setup).
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `sub` | `string` | ID do usuário (= `auth.uid()` no Supabase) |
+| `email` | `string` | E-mail do usuário |
+| `name` | `string` | Nome completo |
+| `avatar_url` | `string` | URL do avatar |
+| `is_producer` | `boolean` | `true` se o produtor tem status `verified` |
+| `is_beta` | `boolean` | `true` se aceitou o NDA do programa beta |
+| `company_name` | `string` | Nome da empresa vinculada |
+| `rank_name` | `string` | Rank atual do usuário |
+| `plan_slug` | `string` | Plano ativo (`easy-standard`, `easy-pro`, `easy-enterprise`) |
+| `provider` | `string` | Provider OAuth usado (`google`, `github`, `azure`, `email`) |
+
+<Note>
+Não há claim `role` ou `discord_id` no `eg_session`. A autorização de administrador é verificada no app-front via `requireAdmin()` que consulta o banco diretamente.
+</Note>
+
+## Integração via `@easygoal/packages/auth` (recomendado)
+
+Para conectar um app ao SSO, use o package do monorepo. Ele encapsula o `handleAuthCallback`, `EgSessionProvider` e hook `useEgSession`.
+
+Veja o fluxo completo em [Autenticação Cross-Domain](/sso/autenticacao-cross-domain).
 
 ## Variáveis de Ambiente do SSO
 
@@ -50,11 +74,17 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# URLs
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# URL pública do SSO
+NEXT_PUBLIC_APP_URL=https://sso.easygoal.com.br
+
+# Segredo para assinar eg_session JWT
+SSO_JWT_SECRET=your-jwt-secret
 
 # Webhook — DEVE ser idêntico ao SSO_WEBHOOK_SECRET do app-front
 WEBHOOK_SECRET=your-webhook-secret-key
+
+# Domínio do cookie (produção)
+COOKIE_DOMAIN=.easygoal.com.br
 
 # Email
 RESEND_API_KEY=your-resend-api-key
@@ -64,21 +94,6 @@ RESEND_API_KEY=your-resend-api-key
 `WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser **idênticos**. Qualquer divergência fará com que todos os webhooks sejam rejeitados com status 401.
 </Warning>
 
-## Claims do JWT / Sessão Supabase
-
-Para apps que usam `@easygoal/auth`, as informações do usuário estão disponíveis na sessão Supabase. Os campos relevantes na tabela `profiles`:
-
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id` | `uuid` | ID do usuário (= `auth.uid()`) |
-| `role` | `text` | `user`, `producer`, `admin`, `super_admin` |
-| `is_beta` | `boolean` | `true` se o usuário aceitou o NDA do programa beta |
-| `discord_id` | `text` | ID do Discord vinculado (nulo se não conectado) |
-
-<Note>
-  O claim `is_beta` é definido durante o onboarding quando o usuário aceita o NDA do programa beta em `/complete-profile`. Use esse campo para exibir recursos exclusivos de beta no frontend.
-</Note>
-
 ## Endpoints do SSO
 
 | Método | Endpoint | Descrição |
@@ -87,17 +102,21 @@ Para apps que usam `@easygoal/auth`, as informações do usuário estão dispon�
 | `GET` | `/auth/signup` | Criar conta |
 | `GET` | `/auth/forgot-password` | Solicitar reset de senha |
 | `GET` | `/auth/reset-password` | Redefinir senha (via link de email) |
-| `GET/POST` | `/auth/callback` | Callback OAuth do Supabase |
-| `POST` | `/auth/signout` | Logout — invalida sessão Supabase |
+| `GET` | `/auth/callback` | Callback OAuth do Supabase — cria perfil + emite eg_session |
+| `GET` | `/auth/welcome` | Tela de splash (4s) exibida após login — redireciona para destino |
+| `GET` | `/auth/check` | Verifica se o `eg_session` cookie é válido — retorna JSON |
+| `POST` | `/auth/verify` | Valida `eg_token` temporário de app externo — retorna `eg_session` |
+| `POST` | `/auth/signout` | Logout — invalida cookie `eg_session` |
 | `GET` | `/auth/error` | Página de erro de autenticação |
 | `GET` | `/complete-profile` | Completar perfil após OAuth |
-| `GET` | `/dashboard` | Dashboard do usuário no SSO |
+| `GET` | `/api/me` | Retorna perfil do usuário via `Bearer <supabase_token>` |
 | `POST` | `/api/webhook/payment` | Recebe notificação de compra (HMAC SHA256) |
 | `GET` | `/api/webhook/payment` | Health check do endpoint |
 | `GET` | `/api/plans/public` | Planos disponíveis (público) |
 
 ## Checklist do SSO
 
+<Check>Configurar `SSO_JWT_SECRET` para assinar o `eg_session`</Check>
 <Check>Configurar `WEBHOOK_SECRET` (= `SSO_WEBHOOK_SECRET` do app-front)</Check>
 <Check>Configurar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`</Check>
 <Check>Adicionar URLs de redirect em Supabase → Auth → URL Configuration</Check>
