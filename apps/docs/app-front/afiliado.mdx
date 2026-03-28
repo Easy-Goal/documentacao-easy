@@ -21,6 +21,50 @@ O programa de afiliados permite que qualquer usuário autenticado divulgue produ
 
 ---
 
+## Fluxo de solicitação de afiliação
+
+Para se tornar afiliado de um produto específico:
+
+<Steps>
+  <Step title="Ativar perfil de afiliado">
+    Acesse `/join/affiliate` e complete o wizard de ativação (aceite dos termos + configuração da chave PIX).
+    Sem perfil ativo, o botão "Solicitar afiliação" fica desabilitado.
+  </Step>
+  <Step title="Solicitar afiliação">
+    Em `/affiliate/products`, clique em **Solicitar afiliação** no produto desejado.
+    A solicitação entra com status `pending`.
+  </Step>
+  <Step title="Aguardar aprovação do produtor">
+    O produtor do produto recebe a solicitação e pode aprovar, rejeitar ou suspender a membership.
+    Após aprovação (`active`), seu link de afiliado fica disponível na mesma página.
+  </Step>
+  <Step title="Divulgar e acompanhar">
+    Copie seu link exclusivo e divulgue. Cliques e conversões são rastreados em tempo real no dashboard.
+  </Step>
+</Steps>
+
+---
+
+## Status da membership de afiliado
+
+| Status | Descrição |
+|--------|-----------|
+| `pending` | Solicitação enviada, aguardando aprovação do produtor |
+| `active` | Aprovado — link de afiliado disponível para copiar |
+| `rejected` | Solicitação recusada pelo produtor |
+| `suspended` | Afiliação suspensa — contate o produtor |
+
+---
+
+## Convite direto
+
+Além da solicitação autônoma, há dois fluxos de convite:
+
+- **Convite pelo admin** — a equipe EasyGoal pode convidar um usuário diretamente, enviando uma notificação in-app com o link para `/affiliate`. Não exige que o usuário já tenha perfil ativo.
+- **Convite pelo produtor** — o produtor pode compartilhar o link de afiliação do produto diretamente. O usuário ainda precisa ter o perfil de afiliado ativo para completar a solicitação.
+
+---
+
 ## Rotas do módulo de afiliados
 
 | Rota | Descrição |

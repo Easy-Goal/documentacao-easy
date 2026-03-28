@@ -76,14 +76,42 @@ Lista de serviços contratados pelo usuário. Permite acompanhar o andamento das
 
 **Rota:** `/billing`
 
-Histórico de cobranças e gestão de assinaturas ativas. Permite:
+Histórico de cobranças e gestão de contratações. A página tem duas abas:
 
-- Visualizar todas as assinaturas SaaS
-- Consultar status de pagamentos (ativo, cancelado, pendente)
-- Cancelar assinaturas
+### Aba — Serviços Avulsos
+
+Lista as solicitações de serviço enviadas pelo marketplace, com status atualizado em tempo real:
+
+| Status | Descrição |
+|--------|-----------|
+| `pending_quote` / `collecting` | Aguardando proposta ou mais informações |
+| `awaiting_signature` | Contrato pronto para assinar — botão **Assinar** disponível |
+| `awaiting_payment` | Link de pagamento gerado — botão **Pagar** disponível |
+| `in_progress` | Serviço em execução |
+| `completed` | Serviço concluído |
+| `cancelled` | Cancelado |
+
+Se o produtor solicitou informações adicionais, aparece o badge **"Informação solicitada"** com botão **Responder**.
+
+### Aba — Assinaturas SaaS
+
+Lista de assinaturas de produtos SaaS contratados. Para cada assinatura são exibidos: valor, frequência de cobrança, data de contratação, data de início e próxima cobrança prevista.
+
+| Status | Descrição |
+|--------|-----------|
+| `pending` | Aguardando pagamento — botão **Pagar agora** com link AbacatePay |
+| `active` | Assinatura ativa |
+| `suspended` | Suspensa por inadimplência — botão **Pagar fatura e reativar** disponível |
+| `cancelled` | Cancelada pelo usuário |
+| `expired` | Expirada |
+| `failed` | Pagamento falhou |
+
+**Cancelar assinatura:** disponível para assinaturas `active` ou `pending`. Ao clicar, um modal solicita o motivo do cancelamento (obrigatório) e um comentário opcional.
+
+**Reativar por inadimplência:** assinaturas `suspended` exibem um alerta e o botão **"Pagar fatura e reativar"** que abre o link de cobrança AbacatePay diretamente.
 
 <Note>
-  O processamento de pagamentos é feito via **AbacatePay**. Cartões de crédito, débito e PIX são suportados dependendo do plano do produto.
+  O processamento de pagamentos é feito via **AbacatePay**. PIX, cartão de crédito e débito são suportados dependendo da configuração do produto.
 </Note>
 
 ---

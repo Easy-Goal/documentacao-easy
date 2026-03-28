@@ -1,5 +1,5 @@
 ---
-title: "Step 7 — Testes e Homologação"
+title: "Step 4 — Testes e Homologação"
 description: "Valida que tudo está funcionando corretamente antes de publicar o produto no marketplace."
 ---
 
@@ -42,7 +42,7 @@ description: "Valida que tudo está funcionando corretamente antes de publicar o
   </Step>
 </Steps>
 
-## Colunas da Planilha (Step 7)
+## Colunas da Planilha (Step 4)
 
 | Coluna | Header | Variável |
 |--------|--------|----------|
@@ -56,7 +56,7 @@ description: "Valida que tudo está funcionando corretamente antes de publicar o
 | L | availability | `{{availability}}` |
 | M | final_notes | `{{final_notes}}` |
 
-## O que acontece após o Step 7
+## O que acontece após o Step 4
 
 ```
 Admin recebe notificação
@@ -65,7 +65,7 @@ Admin testa o produto com as credenciais fornecidas
    ↓
 Admin homologa (todos os checks OK?)
    ↓
-[Produto aprovado] → [Publicado no marketplace]
+[Produto aprovado] → GA4 + GTM provisionados automaticamente → Publicado no marketplace
    ↓
 Produtor recebe notificação de publicação
 ```
@@ -73,6 +73,18 @@ Produtor recebe notificação de publicação
 <Tip>
 O time de review entra em contato em até **48h úteis** após a conclusão de todos os steps. Você pode acompanhar o progresso no painel de produtor.
 </Tip>
+
+## Botão "Testar GA4" (Admin)
+
+Após a aprovação, o admin pode validar que os eventos de analytics estão chegando corretamente no GA4 do produto via painel admin (`/admin/saas-products/[id]`):
+
+- **Testar GA4** — envia um evento `purchase` de teste ao GA4 do produto. Use para confirmar que a propriedade foi provisionada corretamente e que os dados aparecem no DebugView do GA4.
+- **Abrir GA4** — abre o painel GA4 do produto diretamente.
+- **Sincronizar Property ID** — visível apenas quando `ga4_measurement_id` existe mas `ga4_property_id` está ausente; backfill manual do ID numérico da propriedade.
+
+<Note>
+O Analytics (GA4 + GTM) é provisionado automaticamente ao aprovar o produto. Não é necessário nenhuma ação do produtor para configurar rastreamento.
+</Note>
 
 ## Fluxo de Comentários Admin ↔ Produtor
 
