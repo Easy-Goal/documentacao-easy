@@ -1,0 +1,72 @@
+---
+title: "Saques"
+description: "Como funciona o saldo do produtor, a janela de liberação e o processo de solicitação de saque via PIX."
+---
+
+## Visão geral
+
+O saldo do produtor é gerenciado automaticamente pela plataforma com base nas cobranças processadas. Acesse **Configurações → Pagamentos → Saques** para acompanhar e solicitar transferências.
+
+---
+
+## Saldo disponível vs. saldo pendente
+
+| Tipo | Descrição |
+|------|-----------|
+| **Saldo disponível** | Pronto para saque — período de confirmação encerrado |
+| **Saldo pendente** | Cobrança confirmada, aguardando a janela de 3 dias |
+
+### Janela de liberação
+
+Toda cobrança aprovada passa por uma janela de **3 dias úteis** antes de entrar no saldo disponível. Isso permite o processamento de estornos sem comprometer o saldo.
+
+```
+Cobrança aprovada
+      ↓
+  D+3 úteis
+      ↓
+Saldo disponível → elegível para saque
+```
+
+---
+
+## Solicitar saque
+
+<Steps>
+  <Step title="Verifique o saldo disponível">
+    Acesse **Configurações → Pagamentos**. Só é possível solicitar saque se houver saldo disponível maior que zero.
+  </Step>
+  <Step title="Confirme a chave PIX">
+    A chave PIX cadastrada aparece no formulário. Caso precise alterar, clique em **"Editar chave PIX"** antes de continuar.
+  </Step>
+  <Step title="Solicite a transferência">
+    Clique em **"Solicitar saque"**. A solicitação entra na fila de processamento da equipe financeira da Easy Goal.
+  </Step>
+  <Step title="Aguarde a confirmação">
+    O pagamento é processado em lote. Você receberá uma notificação quando a transferência for realizada.
+  </Step>
+</Steps>
+
+---
+
+## Chave PIX
+
+Configure ou altere sua chave PIX em **Configurações → Pagamentos**:
+
+| Tipo | Formato |
+|------|---------|
+| CPF | `000.000.000-00` |
+| CNPJ | `00.000.000/0000-00` |
+| E-mail | `seu@email.com` |
+| Telefone | `+55 11 99999-9999` |
+| Chave aleatória | string de 32 caracteres |
+
+<Warning>
+  Verifique a chave PIX antes de solicitar o saque. Transferências para chaves incorretas não podem ser revertidas automaticamente.
+</Warning>
+
+---
+
+## Divisão de receita (co-produção)
+
+Se o produto tiver co-produtores configurados, o saldo já aparece **após o split automático** — você vê apenas a sua parcela. Veja [Squad & Co-produção](/app-front/produtor/squad) para entender como configurar a divisão.

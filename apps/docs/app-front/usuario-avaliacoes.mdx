@@ -1,0 +1,70 @@
+---
+title: "Avaliações & Feedback"
+description: "Como usuários avaliam produtos e serviços: avaliação pública no marketplace e feedback privado para o produtor."
+---
+
+## Visão geral
+
+Após contratar um produto SaaS ou serviço, o usuário pode deixar dois tipos de registro: uma **avaliação pública** visível no marketplace e um **feedback privado** destinado ao produtor e ao admin.
+
+**Rota:** `/reviews` · acessível também pelo dashboard de cada produto contratado
+
+---
+
+## Avaliação pública
+
+Exibida no card do produto no marketplace. Composta por:
+
+| Campo | Descrição |
+|-------|-----------|
+| **Nota** | 1 a 5 estrelas |
+| **Comentário** | Texto livre (máx. 500 caracteres) |
+
+<Info>
+  A avaliação pública fica visível para todos os visitantes do marketplace, incluindo usuários não autenticados.
+</Info>
+
+### Quando é possível avaliar
+
+O usuário pode avaliar um produto após ter uma assinatura ativa ou encerrada. Cada usuário pode deixar **uma avaliação por produto**.
+
+---
+
+## Feedback privado
+
+Visível apenas para o **produtor responsável** e para **admins**. Não aparece no marketplace.
+
+Útil para relatos de problemas, sugestões de melhoria ou elogios que o usuário prefere não tornar públicos.
+
+| Campo | Descrição |
+|-------|-----------|
+| **Tipo** | `elogio`, `sugestão`, `problema` |
+| **Mensagem** | Texto livre (máx. 1000 caracteres) |
+
+---
+
+## Editar ou deletar avaliação
+
+O usuário pode editar ou remover **sua própria avaliação** a qualquer momento:
+
+<Steps>
+  <Step title="Acesse suas avaliações">
+    Vá em `/reviews` ou clique em "Minhas avaliações" no dashboard.
+  </Step>
+  <Step title="Selecione a avaliação">
+    Localize o produto que deseja editar.
+  </Step>
+  <Step title="Editar ou remover">
+    Clique em **"Editar"** para atualizar nota e comentário, ou em **"Remover"** para excluir a avaliação permanentemente.
+  </Step>
+</Steps>
+
+<Warning>
+  A remoção de uma avaliação é **permanente** e não pode ser desfeita. A nota deixa de contar para a média do produto imediatamente.
+</Warning>
+
+---
+
+## Visão do produtor
+
+O produtor vê todas as avaliações públicas e feedbacks privados do produto em **Produtos → [Produto] → aba "Avaliações"**. É possível visualizar a média geral, a distribuição de notas e responder feedbacks privados diretamente na plataforma.

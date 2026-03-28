@@ -64,6 +64,21 @@ RESEND_API_KEY=your-resend-api-key
 `WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser **idênticos**. Qualquer divergência fará com que todos os webhooks sejam rejeitados com status 401.
 </Warning>
 
+## Claims do JWT / Sessão Supabase
+
+Para apps que usam `@easygoal/auth`, as informações do usuário estão disponíveis na sessão Supabase. Os campos relevantes na tabela `profiles`:
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | `uuid` | ID do usuário (= `auth.uid()`) |
+| `role` | `text` | `user`, `producer`, `admin`, `super_admin` |
+| `is_beta` | `boolean` | `true` se o usuário aceitou o NDA do programa beta |
+| `discord_id` | `text` | ID do Discord vinculado (nulo se não conectado) |
+
+<Note>
+  O claim `is_beta` é definido durante o onboarding quando o usuário aceita o NDA do programa beta em `/complete-profile`. Use esse campo para exibir recursos exclusivos de beta no frontend.
+</Note>
+
 ## Endpoints do SSO
 
 | Método | Endpoint | Descrição |

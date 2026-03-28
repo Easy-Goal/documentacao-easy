@@ -35,7 +35,7 @@
           },
           {
             "group": "Área do Usuário",
-            "pages": ["app-front/usuario", "app-front/afiliado", "app-front/roadmap", "app-front/beta-program"]
+            "pages": ["app-front/usuario", "app-front/usuario-avaliacoes", "app-front/afiliado", "app-front/roadmap", "app-front/beta-program"]
           },
           {
             "group": "Área do Produtor",
@@ -43,12 +43,15 @@
               "app-front/produtor",
               "app-front/produtor/squad",
               "app-front/produtor/cobranca",
-              "app-front/produtor/relatorios"
+              "app-front/produtor/saques",
+              "app-front/produtor/checkout",
+              "app-front/produtor/relatorios",
+              "app-front/produtor/analytics"
             ]
           },
           {
             "group": "Área Admin",
-            "pages": ["app-front/admin", "app-front/admin-beta"]
+            "pages": ["app-front/admin", "app-front/admin-beta", "app-front/admin-analytics"]
           }
         ]
       },

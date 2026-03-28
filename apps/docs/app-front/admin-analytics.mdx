@@ -1,0 +1,70 @@
+---
+title: "Admin: Analytics"
+description: "Provisione e gerencie propriedades GA4 e containers GTM por produto na plataforma."
+---
+
+## Visão geral
+
+**Rota:** `/admin/analytics`
+
+O painel de analytics permite ao `super_admin` visualizar o status de provisionamento de GA4 e GTM de todos os produtos aprovados, reprocessar provisionamentos com falha e sincronizar IDs de propriedades manualmente quando necessário.
+
+---
+
+## Lista de produtos
+
+A tabela exibe todos os produtos com status `approved`:
+
+| Coluna | Descrição |
+|--------|-----------|
+| **Produto** | Nome e slug do produto |
+| **GA4 Property ID** | ID da propriedade provisionada (`G-XXXXXXXXXX`) |
+| **GTM Container ID** | ID do container GTM (`GTM-XXXXXXX`) |
+| **Status** | `provisioned`, `pending`, `failed` |
+| **Atualizado em** | Última sincronização |
+
+---
+
+## Provisionar manualmente
+
+Se um produto foi aprovado mas o provisionamento automático falhou:
+
+<Steps>
+  <Step title="Localize o produto">
+    Filtre por `status: failed` ou `status: pending` na tabela.
+  </Step>
+  <Step title="Clique em Reprovisionar">
+    O botão **"Reprovisionar"** aciona novamente a criação de propriedade GA4 + container GTM via API do Google.
+  </Step>
+  <Step title="Aguarde o retorno">
+    O provisionamento é assíncrono. Atualize a página após 2-3 minutos para ver o novo status.
+  </Step>
+</Steps>
+
+---
+
+## Sincronizar Property ID manualmente
+
+Em casos onde a propriedade GA4 já existe na conta Google e precisa apenas ser vinculada ao produto:
+
+1. Acesse o produto na tabela e clique em **"Editar IDs"**
+2. Insira o `GA4 Property ID` e o `GTM Container ID` manualmente
+3. Salve — os IDs serão injetados no checkout e nas páginas do produto imediatamente
+
+<Note>
+  O ID manual substitui o provisionamento automático. Use com cautela: insira apenas IDs de propriedades que pertencem à conta Google da Easy Goal.
+</Note>
+
+---
+
+## Eventos monitorados
+
+O admin pode ver o volume agregado de eventos de todos os produtos em **Relatórios → Plataforma → Conversões**:
+
+| Evento | Descrição |
+|--------|-----------|
+| `view_product` | Visualizações de página de produto |
+| `start_checkout` | Checkouts iniciados |
+| `purchase` | Compras confirmadas |
+
+Para análises por produto específico, use o link direto para a propriedade GA4 na coluna da tabela.

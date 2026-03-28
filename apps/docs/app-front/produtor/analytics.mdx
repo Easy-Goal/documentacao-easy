@@ -1,0 +1,65 @@
+---
+title: "Analytics"
+description: "Como funciona o rastreamento automático de GA4 e GTM para cada produto aprovado na plataforma."
+---
+
+## Visão geral
+
+Ao ter um produto **aprovado**, a plataforma provisiona automaticamente uma propriedade **Google Analytics 4 (GA4)** e um container **Google Tag Manager (GTM)** exclusivos para o produto. Nenhuma configuração manual é necessária.
+
+---
+
+## Provisionamento automático
+
+<Steps>
+  <Step title="Produto aprovado pelo admin">
+    Quando o status do produto muda para `approved`, a plataforma aciona o provisionamento via API do Google.
+  </Step>
+  <Step title="GA4 + GTM criados">
+    Uma propriedade GA4 e um container GTM são criados na conta Google da Easy Goal e vinculados ao produto.
+  </Step>
+  <Step title="IDs registrados no banco">
+    Os IDs (`ga4_property_id`, `gtm_container_id`) são salvos em `saas_product_tracking_config` e injetados automaticamente no checkout e nas páginas do produto.
+  </Step>
+</Steps>
+
+<Note>
+  O provisionamento pode levar até 5 minutos após a aprovação. Se os dados não aparecerem em Relatórios → Aquisição após esse prazo, contate o suporte.
+</Note>
+
+---
+
+## Eventos rastreados
+
+Os eventos abaixo são enviados automaticamente pelo app sem nenhuma configuração adicional:
+
+| Evento | Quando dispara |
+|--------|---------------|
+| `view_product` | Usuário acessa a página do produto |
+| `start_checkout` | Usuário inicia o processo de compra |
+| `purchase` | Compra confirmada pelo gateway |
+
+---
+
+## Como ver os dados
+
+**Rota:** `Relatórios → Aquisição`
+
+A aba **Aquisição** mostra o funil de conversão baseado nos três eventos acima:
+
+- **Visualizações** — total de `view_product`
+- **Checkouts iniciados** — total de `start_checkout`
+- **Conversões** — total de `purchase`
+- **Taxa de conversão** — `purchase / view_product`
+
+<Tip>
+  Para análises avançadas (segmentação por UTM, relatórios customizados), acesse diretamente o painel do GA4 em [analytics.google.com](https://analytics.google.com). O acesso leitor é concedido automaticamente ao e-mail cadastrado como produtor.
+</Tip>
+
+---
+
+## Rastreamento de UTM
+
+A plataforma preserva os parâmetros UTM da URL de origem e os associa ao evento `purchase`. Isso permite identificar quais campanhas geram mais vendas no relatório de Aquisição.
+
+Parâmetros suportados: `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`.

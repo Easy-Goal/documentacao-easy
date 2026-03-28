@@ -200,6 +200,26 @@ export async function GET(request: NextRequest) {
 Os tokens são passados como query string na URL de callback. Isso é aceitável pois o callback é imediatamente redirecionado e os tokens são salvos em cookies httpOnly — nunca acessíveis por JavaScript.
 </Note>
 
+## Complete Profile — NDA Beta
+
+Após o primeiro login via OAuth (ou e-mail/senha), usuários que ainda não completaram o perfil são redirecionados para `/complete-profile` no SSO.
+
+Para usuários do **programa beta**, essa tela inclui um passo adicional de aceite do NDA:
+
+<Steps>
+  <Step title="Dados básicos">
+    Nome completo e outros campos obrigatórios do perfil.
+  </Step>
+  <Step title="Aceite do NDA (apenas betas)">
+    Exibido somente se o usuário recebeu um convite beta. O texto do NDA é apresentado e o usuário deve marcar a caixa de aceite. O timestamp, IP e user agent são capturados no servidor e gravados em `beta_users`.
+  </Step>
+  <Step title="Redirecionamento">
+    Após a conclusão, o SSO redireciona para o `redirect_to` original ou para `/dashboard`.
+  </Step>
+</Steps>
+
+O campo `is_beta` em `profiles` é definido como `true` após o aceite do NDA. Apps podem usar esse claim para exibir recursos exclusivos de beta.
+
 ## Middleware de Proteção
 
 ```ts
