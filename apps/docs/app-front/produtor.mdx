@@ -1,6 +1,6 @@
 ---
 title: "Área do Produtor"
-description: "Interface completa para produtores parceiros: gerencie produtos SaaS, acompanhe métricas, monitore submissões MVP e configure integrações via API."
+description: "Interface completa para produtores parceiros: gerencie produtos SaaS, acompanhe relatórios, configure equipes e integrações via API."
 ---
 
 ## Visão geral
@@ -12,8 +12,9 @@ O sidebar do produtor exibe as seguintes seções:
 | Seção | Rotas | Descrição |
 |-------|-------|-----------|
 | **Dashboard** | `/producer/dashboard` | KPIs e resumo da operação |
-| **Minha Loja** | `/producer/products`, `/producer/submissions`, `/producer/metrics` | Produtos, submissões e métricas |
-| **Integração** | `/producer/api-keys` | Chaves de API para webhooks e integrações |
+| **Minha Loja** | `/producer/products` | Produtos publicados e em rascunho |
+| **Relatórios** | `/producer/reports` | Financeiro, aquisição e assinantes |
+| **Integrações** | `/producer/api-keys` | Chaves de API para webhooks |
 | **Afiliados** | `/affiliate/*` | Programa de afiliados (mesmo acesso do usuário) |
 
 ---
@@ -49,7 +50,7 @@ Ao acessar `/producer/products/new`, o produtor inicia o fluxo de cadastro de um
   <Step title="Dados básicos">Nome, descrição, categoria e planos de preço do produto.</Step>
   <Step title="SSO">Configurar a integração com o SSO da Easy Goal para autenticação dos clientes.</Step>
   <Step title="Pagamentos">Configurar planos e preços no AbacatePay.</Step>
-  <Step title="Analytics">Integrar com Google Analytics 4 para rastrear conversões.</Step>
+  <Step title="Analytics">GTM + GA4 são provisionados automaticamente ao produto ser aprovado.</Step>
   <Step title="Visual">Personalizar cores, logo e identidade visual do produto no ecossistema.</Step>
   <Step title="Compliance">Adicionar links de Termos de Uso e Política de Privacidade.</Step>
   <Step title="Testes">Validar o fluxo completo antes da submissão para aprovação.</Step>
@@ -70,31 +71,23 @@ Para enviar um step concluído para revisão: `/producer/products/[id]/steps/[st
 
 ---
 
-## Submissões MVP
+## Relatórios
 
-**Rota:** `/producer/submissions`
+**Rota:** `/producer/reports`
 
-Acompanhe o status de submissões dos seus produtos para revisão da equipe Easy Goal. Uma submissão é criada automaticamente quando o produtor marca todos os 7 steps como concluídos e solicita publicação.
+Dashboard analítico com três abas de dados:
 
-| Status | Significado |
-|--------|-------------|
-| `pending` | Aguardando análise do admin |
-| `in_review` | Em análise pela equipe |
-| `approved` | Produto aprovado e publicado no catálogo |
-| `rejected` | Produto rejeitado (com motivo no feedback) |
+| Aba | Conteúdo |
+|-----|----------|
+| **Financeiro** | Receita total, comissão, saques pendentes e breakdown por produto |
+| **Aquisição** | Funil GA4 (view → checkout → purchase), canais de tráfego, UTM interno, filtro por produto e período |
+| **Assinantes** | Evolução de assinantes ativos, churn e MRR *(em breve)* |
 
----
+Os dados de aquisição são alimentados pelo Google Analytics 4 provisionado automaticamente ao produto ser aprovado.
 
-## Métricas
-
-**Rota:** `/producer/metrics`
-
-Dashboard analítico com dados de performance dos produtos:
-
-- **Assinantes:** total e evolução mensal
-- **MRR:** receita recorrente mensal por produto
-- **Churn:** taxa de cancelamento
-- **Afiliados:** quantidade de afiliados ativos e conversões geradas
+<Info>
+  Para ver dados de aquisição, o produto precisa estar **aprovado**. GA4 + GTM são criados automaticamente nesse momento — nenhuma configuração manual é necessária.
+</Info>
 
 ---
 
@@ -127,8 +120,24 @@ Authorization: Bearer <api-key>
 
 ---
 
+## Equipe & Co-produção
+
+Cada produto pode ter uma equipe (Squad) com co-produtores que recebem split automático em cada pagamento.
+
+→ Documentação completa: [Equipe & Co-produção](/app-front/produtor/squad)
+
+---
+
+## Planos & Cobrança
+
+Configure preços, ciclos de cobrança e gateway de pagamento (AbacatePay) para cada produto.
+
+→ Documentação completa: [Planos & Cobrança](/app-front/produtor/cobranca)
+
+---
+
 ## Programa de afiliados (como produtor)
 
-Produtores também têm acesso à área de afiliados como usuário. Além disso, podem visualizar os afiliados que estão promovendo seus produtos nas métricas do dashboard.
+Produtores também têm acesso à área de afiliados como usuário. Além disso, podem visualizar os afiliados que estão promovendo seus produtos nos relatórios de aquisição.
 
 Para configurar a taxa de comissão dos afiliados de um produto, acesse as configurações do produto em `/producer/products/[id]`.

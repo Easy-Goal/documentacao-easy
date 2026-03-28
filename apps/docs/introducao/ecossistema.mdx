@@ -14,10 +14,10 @@ O Easy Goal é composto por um conjunto de repositórios independentes que traba
 | `app-front` | Ativo | App principal — área do usuário, produtor, afiliado e admin | Privado |
 | `sso` | Ativo | Servidor de autenticação centralizado (SSO + JWT) | Privado |
 | `easygoal-monorepo` | Ativo | Packages npm compartilhados: `@easygoal/ui`, `@easygoal/auth` | Será público |
-| `easy-ia` | Planejado | Assistente IA plugável multi-tenant (EasyGoal = primeiro tenant) | Privado |
-| `site-easygoal` | Aguardando | Site institucional | Privado |
-| `lp-easy-club` | Aguardando | Landing page da comunidade Easy Club | Privado |
+| `site-easygoal` | Ativo | Site institucional e marketplace público | Privado |
+| `lp-easy-club` | Ativo | Landing page da comunidade Easy Club (Discord) | Privado |
 | `documentacao-easygoal` | Ativo | Documentação técnica pública (Mintlify) | Público |
+| `easy-ia` | Planejado | Assistente IA plugável multi-tenant (EasyGoal = primeiro tenant) | Privado |
 | `easy-labs` | Ativo | Hub de orquestração + laboratório de IA para devs e agentes | Privado |
 
 ## Diagrama de Dependências
@@ -31,6 +31,17 @@ app-front
   → autentica via: sso
   → usa: @easygoal/ui, @easygoal/auth (via easygoal-monorepo)
   → banco: Supabase (projeto compartilhado)
+  → integração: Discord OAuth (vincular conta do usuário)
+
+site-easygoal
+  → autentica via: sso (header com estado de sessão)
+  → aponta para: app-front (CTAs, marketplace)
+  → usa: @easygoal/ui (via easygoal-monorepo)
+
+lp-easy-club
+  → autentica via: sso (SSO Easy Goal)
+  → independente: conteúdo estático + Discord invite
+  → URL: club.easygoal.com.br
 
 easy-ia (planejado)
   → autentica via: sso (painel de tenants)
@@ -50,6 +61,8 @@ easygoal-monorepo
 | `app-front` | app.easygoal.com.br |
 | `sso` | sso.easygoal.com.br |
 | `site-easygoal` | easygoal.com.br |
+| `lp-easy-club` | club.easygoal.com.br |
+| `documentacao-easygoal` | docs.easygoal.com.br |
 | `easy-ia` | TBD |
 
 ## Como os projetos se relacionam

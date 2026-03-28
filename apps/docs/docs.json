@@ -39,11 +39,16 @@
           },
           {
             "group": "Área do Produtor",
-            "pages": ["app-front/produtor", "app-front/produtor/squad", "app-front/produtor/cobranca"]
+            "pages": [
+              "app-front/produtor",
+              "app-front/produtor/squad",
+              "app-front/produtor/cobranca",
+              "app-front/produtor/relatorios"
+            ]
           },
           {
             "group": "Área Admin",
-            "pages": ["app-front/admin"]
+            "pages": ["app-front/admin", "app-front/admin-beta"]
           }
         ]
       },
@@ -57,10 +62,7 @@
               "typebot/step-1-dados-basicos",
               "typebot/step-2-sso",
               "typebot/step-3-pagamentos",
-              "typebot/step-4-analytics",
-              "typebot/step-5-visual",
-              "typebot/step-6-compliance",
-              "typebot/step-7-testes"
+              "typebot/step-4-testes"
             ]
           }
         ]

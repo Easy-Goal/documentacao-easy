@@ -12,6 +12,7 @@ A área admin é acessada por usuários com `is_super_admin: true`. O sidebar ex
 | **Gestão** | `/admin/users`, `/admin/companies`, `/admin/producers` | Pessoas e organizações |
 | **Produtos** | `/admin/saas-products`, `/admin/saas-steps`, `/admin/services` | Catálogo e aprovações |
 | **Financeiro** | `/admin/affiliates`, `/admin/withdrawals`, `/admin/service-requests`, `/admin/api-apps`, `/admin/reports` | Financeiro e relatórios |
+| **Comunidade** | `/admin/beta`, `/admin/discord/events` | Programa beta e Discord |
 | **Sistema** | `/admin/system` | Configurações, admins e logs |
 
 <Warning>
@@ -207,6 +208,31 @@ Relatórios consolidados da plataforma:
 - **Usuários:** novos cadastros, churn, retenção
 - **Produtores:** performance comparativa entre produtores
 - **Afiliados:** volume de comissões geradas e pagas
+
+---
+
+## Programa Beta
+
+**Rota:** `/admin/beta`
+
+Painel de gestão dos usuários inscritos no programa beta.
+
+→ Documentação completa: [Admin: Programa Beta](/app-front/admin-beta)
+
+---
+
+## Discord — Eventos
+
+**Rota:** `/admin/discord/events`
+
+Sincronize e gerencie os eventos do servidor Discord da Easy Goal dentro do painel admin:
+
+- **Sincronizar eventos:** importa eventos criados no Discord para o painel (via bot)
+- **Aprovar / reprovar:** cada evento pode ser aprovado ou rejeitado para aparecer no catálogo da plataforma
+- **Configurações por evento:** rank mínimo exigido, planos habilitados, produto associado, destaque
+- **Link externo:** acesso direto ao evento no Discord
+
+Eventos aprovados ficam visíveis para usuários que atendam ao rank e plano configurados.
 
 ---
 
