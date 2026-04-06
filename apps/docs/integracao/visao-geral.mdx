@@ -1,0 +1,62 @@
+---
+title: "Visão Geral — Integrações Externas"
+description: "Dois modos de integração e dois gateways disponíveis para produtos no ecossistema Easy Goal."
+---
+
+## Modos de integração
+
+Ao registrar seu produto na Easy Goal, você escolhe **como** gerenciar autenticação e pagamento.
+
+<CardGroup cols={2}>
+  <Card title="Integrado" icon="plug" href="/integracao/modo-integrado">
+    SSO + checkout 100% via Easy Goal. Menor fricção para o produtor — a EG cuida de tudo.
+  </Card>
+  <Card title="Externo" icon="arrow-right-arrow-left" href="/integracao/modo-externo">
+    Você mantém seu próprio checkout (Kiwify, AbacatePay etc.). SSO da EG é **opcional**.
+    Somente clientes com pagamento confirmado nos dois lados têm acesso.
+  </Card>
+</CardGroup>
+
+---
+
+## Gateways disponíveis
+
+| Gateway | Modo Integrado | Modo Externo |
+|---|---|---|
+| **AbacatePay** | EG gerencia checkout e cobrança recorrente | Produtor usa AbacatePay próprio; EG recebe webhook |
+| **Kiwify** | EG gerencia o produto no painel Kiwify | Produtor tem produto no Kiwify; EG recebe webhook |
+
+> **Vantagem de usar dois gateways:** se um gateway apresentar instabilidade, é possível migrar novos produtos para o outro sem alterar a integração SSO ou a lógica do seu app.
+
+---
+
+## Matriz de decisão
+
+```
+Quero usar o checkout da Easy Goal?
+├─ Sim → Modo INTEGRADO
+│        ├─ Prefiro PIX/boleto → gateway AbacatePay
+│        └─ Tenho base Kiwify  → gateway Kiwify (EG gerencia)
+└─ Não → Modo EXTERNO
+         ├─ Tenho produto Kiwify  → webhook Kiwify → EG valida
+         ├─ Tenho produto AP próprio → webhook AP  → EG valida
+         └─ SSO opcional: usuários precisam ter conta EG + pagamento confirmado
+```
+
+---
+
+## Como o SSO externo funciona
+
+No modo externo com SSO opcional, a validação segue esta ordem:
+
+1. Usuário clica **"Entrar com Easy Goal"** no seu app
+2. SSO autentica e retorna `eg_session` (JWT com `sub` + `email`)
+3. Seu callback chama `GET /api/saas/check-access` com `api_key` + `user_id` + `email`
+4. Easy Goal verifica `saas_subscriptions` para o produto vinculado à sua `api_key`:
+   - Primeiro login: busca por `email` no `guest_data` (criado pelo webhook Kiwify/AP)
+   - Logins seguintes: busca por `user_id` (vinculado automaticamente no primeiro login)
+5. `active: true` → acesso liberado; `active: false` → redirecionar para checkout
+
+<Note>
+  O webhook de pagamento (Kiwify ou AbacatePay) deve ser configurado para notificar a Easy Goal **além** do seu próprio endpoint. O endereço do canal é `POST /api/webhooks/kiwify/<api_key>` — gerado quando você cria o API App.
+</Note>

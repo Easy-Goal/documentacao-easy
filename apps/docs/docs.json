@@ -77,6 +77,22 @@
         ]
       },
       {
+        "tab": "Integrações",
+        "groups": [
+          {
+            "group": "Visão Geral",
+            "pages": ["integracao/visao-geral"]
+          },
+          {
+            "group": "Modos de Integração",
+            "pages": [
+              "integracao/modo-integrado",
+              "integracao/modo-externo"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "API Reference",
         "groups": [
           {

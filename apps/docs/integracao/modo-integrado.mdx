@@ -1,0 +1,58 @@
+---
+title: "Modo Integrado"
+description: "SSO + checkout 100% via Easy Goal. Zero configuração de pagamento no seu app."
+---
+
+## Quando usar
+
+- Você está lançando um produto novo sem base de clientes existente
+- Quer que a Easy Goal gerencie cobrança, renovação e cancelamento
+- Prefere integração mais simples: apenas SSO + claim `plan_slug` no JWT
+
+## O que a Easy Goal gerencia
+
+| Responsabilidade | Integrado | Externo |
+|---|---|---|
+| Checkout / página de vendas | Easy Goal | Produtor |
+| Cobrança recorrente | Easy Goal | Produtor |
+| Webhook de confirmação | Automático | Manual (configurar no gateway) |
+| SSO / autenticação | Easy Goal | Easy Goal (opcional) |
+| Suporte a pagamento | Compartilhado | Produtor |
+
+## Como funciona
+
+No modo integrado, a autorização de acesso vem diretamente do JWT:
+
+```ts
+// O eg_session já carrega o plano do usuário
+const session = await getEgSession() // cookie httpOnly
+if (session.plan_slug === 'meu-produto') {
+  // acesso liberado
+}
+```
+
+O claim `plan_slug` é atualizado pelo SSO automaticamente quando:
+- Uma nova assinatura é ativada
+- Uma assinatura é cancelada/expirada
+
+## Gateways disponíveis
+
+### AbacatePay (padrão)
+PIX e boleto. Cobrança recorrente automática. Checkout hospedado na Easy Goal.
+
+### Kiwify (EG gerencia)
+A Easy Goal registra e gerencia o produto no painel Kiwify em nome do produtor.
+Útil para produtores que já têm audiência na Kiwify mas querem a infraestrutura EG.
+
+## Registrar produto
+
+1. Acesse `/admin/saas-products` → **Novo Produto**
+2. Defina `integration_type = integrated`
+3. Escolha `payment_gateway` (abacatepay ou kiwify)
+4. Defina preço, frequência e URL de callback pós-pagamento
+
+O checkout será disponibilizado automaticamente em `/checkout/<slug>`.
+
+<Note>
+  Para detalhes do checkout integrado via AbacatePay, veja [Cobrança & Pagamentos](/app-front/produtor/cobranca).
+</Note>
