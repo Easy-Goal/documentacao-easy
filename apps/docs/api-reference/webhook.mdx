@@ -5,7 +5,7 @@ description: "Endpoint POST /api/webhook/payment do SSO. Chamado pelo app-front 
 
 ## POST /api/webhook/payment
 
-Recebe notificações de pagamento do app-front, verificadas via assinatura HMAC SHA256.
+Recebe notificações de pagamento do app-front, verificadas via assinatura HMAC SHA256. Esse canal é interno ao ecossistema Easy Goal — documentado aqui para dar visão completa do fluxo de liberação de acesso, mas produtores e integrações externas não precisam chamá-lo nem replicá-lo.
 
 **URL:** `https://sso.easygoal.com.br/api/webhook/payment`
 
@@ -19,19 +19,20 @@ Recebe notificações de pagamento do app-front, verificadas via assinatura HMAC
 
 ```json
 {
-  "event": "subscription.activated",
-  "data": {
-    "subscription_id": "550e8400-e29b-41d4-a716-446655440000",
-    "product_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-    "product_name": "Club EasyGoal",
-    "user_email": "usuario@email.com",
-    "user_name": "João Silva",
-    "amount": 9900,
-    "frequency": "MONTHLY",
-    "started_at": "2026-02-22T10:00:00.000Z",
-    "is_test": false
+  "event": "purchase.completed",
+  "customer": {
+    "email": "usuario@email.com",
+    "name": "João Silva",
+    "phone": "+5511999999999"
   },
-  "timestamp": "2026-02-22T10:00:00.000Z",
+  "product": {
+    "id": "uuid-do-produto",
+    "plan_slug": "easy-standard"
+  },
+  "company": {
+    "name": "Empresa Ltda",
+    "cnpj": "00.000.000/0001-00"
+  },
   "signature": "a3f8b2c1d4e5f6..."
 }
 ```
@@ -39,84 +40,42 @@ Recebe notificações de pagamento do app-front, verificadas via assinatura HMAC
 **Campos do payload:**
 
 <ParamField body="event" type="string" required>
-  Tipo do evento. Atualmente: `subscription.activated`.
+  Tipo do evento.
 </ParamField>
 
-<ParamField body="data.subscription_id" type="string" required>
-  UUID da assinatura ativada.
+<ParamField body="customer.email" type="string" required>
+  Email do usuário que comprou.
 </ParamField>
 
-<ParamField body="data.product_name" type="string" required>
-  Nome do produto SaaS.
+<ParamField body="customer.name" type="string" required>
+  Nome do usuário.
 </ParamField>
 
-<ParamField body="data.user_email" type="string" required>
-  Email do usuário que assinou.
+<ParamField body="customer.phone" type="string">
+  Telefone do usuário, se disponível.
 </ParamField>
 
-<ParamField body="data.amount" type="number" required>
-  Valor da assinatura em centavos (ex: `9900` = R$ 99,00).
+<ParamField body="product.id" type="string" required>
+  UUID do produto.
 </ParamField>
 
-<ParamField body="data.is_test" type="boolean" required>
-  Se `true`, o webhook é um teste. Não provisionar acesso real.
+<ParamField body="product.plan_slug" type="string" required>
+  Slug do plano. Aceita `easy-standard`, `easy-pro`, `easy-enterprise`.
+</ParamField>
+
+<ParamField body="company" type="object">
+  Dados da empresa vinculada ao usuário, se aplicável (`name`, `cnpj`).
 </ParamField>
 
 <ParamField body="signature" type="string" required>
   Assinatura HMAC SHA256 do payload (sem o campo `signature`) codificada em hex.
 </ParamField>
 
-## Como o app-front assina o webhook
+## Como a assinatura funciona
 
-```ts
-// app-front → utilitário de webhook
-import { createHmac } from 'crypto';
-
-function signWebhook(payload: object, secret: string): string {
-  return createHmac('sha256', secret)
-    .update(JSON.stringify(payload))
-    .digest('hex');
-}
-
-// Enviando o webhook
-const body = { event, data, timestamp };
-const signature = signWebhook(body, process.env.SSO_WEBHOOK_SECRET!);
-
-await fetch(process.env.SSO_WEBHOOK_URL!, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ ...body, signature }),
-});
-```
-
-## Como o SSO verifica a assinatura
-
-```ts
-import { createHmac, timingSafeEqual } from 'crypto';
-
-const { signature, ...bodyWithoutSignature } = payload;
-
-const expectedSignature = createHmac('sha256', process.env.APP_WEBHOOK_SECRET!)
-  .update(JSON.stringify(bodyWithoutSignature))
-  .digest('hex');
-
-const sigBuffer = Buffer.from(signature, 'hex');
-const expectedBuffer = Buffer.from(expectedSignature, 'hex');
-
-const isValid =
-  sigBuffer.length === expectedBuffer.length &&
-  timingSafeEqual(sigBuffer, expectedBuffer);
-```
-
-<Warning>
-Use sempre `timingSafeEqual` para comparar assinaturas. Comparações diretas com `===` são vulneráveis a timing attacks.
-</Warning>
+A assinatura é um HMAC SHA256 do corpo da requisição (sem o campo `signature`), gerado e verificado com um segredo compartilhado apenas entre os serviços internos da Easy Goal. A verificação usa comparação de tempo constante (`timingSafeEqual`) para prevenir timing attacks.
 
 ## Respostas
-
-<ResponseField name="received" type="boolean">
-  `true` quando o webhook foi processado com sucesso.
-</ResponseField>
 
 ```json
 // 200 OK
@@ -129,11 +88,3 @@ Use sempre `timingSafeEqual` para comparar assinaturas. Comparações diretas co
 { "error": "Assinatura ausente" }
 { "error": "Assinatura invalida" }
 ```
-
-## Testar o Webhook
-
-No painel admin do app-front, acesse a seção de configuração do produto e clique em **"Testar Webhook"**. Isso envia um payload com `is_test: true` para o SSO, sem provisionar acesso real.
-
-<Tip>
-Ao receber `is_test: true`, o SSO deve registrar o evento mas **não** liberar acesso ao usuário. Use isso para validar a configuração do endpoint antes de ir para produção.
-</Tip>

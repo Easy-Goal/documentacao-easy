@@ -11,7 +11,7 @@ Inicia o fluxo de autenticação. Exibe o formulário de login e, após autentic
 
 | Parâmetro | Tipo | Obrigatório | Descrição |
 |-----------|------|-------------|-----------|
-| `redirect_to` | `string` | Sim | URL de callback para onde redirecionar após login. Deve estar cadastrada no Supabase → Auth → URL Configuration. |
+| `redirect_to` | `string` | Sim | URL de callback para onde redirecionar após login. Deve estar previamente registrada junto ao time Easy Goal. |
 
 **Respostas:**
 
@@ -99,7 +99,7 @@ Content-Type: application/json
 
 ## GET /api/me
 
-Retorna o perfil do usuário autenticado via Supabase token. Usado pelo `auth-provider` package para buscar dados do usuário após o callback.
+Retorna o perfil do usuário autenticado via token. Usado internamente pelo package de autenticação para buscar dados do usuário após o callback.
 
 **Headers:**
 ```
@@ -126,7 +126,7 @@ Authorization: Bearer {supabase_access_token}
 
 ## POST /api/webhook/payment
 
-Recebe notificações de compra do app-front, verificadas com HMAC SHA256.
+Recebe notificações de compra do app-front, verificadas com HMAC SHA256. Esse canal é interno ao ecossistema Easy Goal — produtores e integrações externas não precisam chamá-lo nem replicá-lo.
 
 **Payload:**
 
@@ -152,27 +152,7 @@ Recebe notificações de compra do app-front, verificadas com HMAC SHA256.
 
 `plan_slug` aceita: `easy-standard`, `easy-pro`, `easy-enterprise`
 
-**Assinando no app-front:**
-
-```ts
-import { createHmac } from 'crypto';
-
-const body = { event, customer, product, company, timestamp };
-const bodyString = JSON.stringify(body);
-const signature = createHmac('sha256', process.env.SSO_WEBHOOK_SECRET!)
-  .update(bodyString)
-  .digest('hex');
-
-await fetch(process.env.SSO_WEBHOOK_URL!, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ ...body, signature }),
-});
-```
-
-<Warning>
-`WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser idênticos.
-</Warning>
+A assinatura é gerada e verificada com HMAC SHA256, usando um segredo compartilhado apenas entre os serviços internos da Easy Goal.
 
 **Respostas:**
 

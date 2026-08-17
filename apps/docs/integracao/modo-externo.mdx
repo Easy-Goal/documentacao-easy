@@ -13,12 +13,11 @@ description: "Mantenha seu checkout. Use o SSO da Easy Goal como camada opcional
 
 <Steps>
   <Step title="Criar API App">
-    Acesse `/admin/api-apps` → clique em **Novo App** → copie a `api_key` gerada.
+    Solicite ao time Easy Goal a criação do API App do seu produto e o repasse da `api_key` gerada.
     Essa chave é o canal privado do seu produto — guarde com segurança.
   </Step>
   <Step title="Registrar produto">
-    Em `/admin/saas-products` → registre seu produto com `integration_type = external`
-    e vincule o API App criado no campo **API App**.
+    Registre seu produto junto à Easy Goal no modo **Externo**, vinculando o API App criado.
   </Step>
   <Step title="Configurar webhook">
     No painel do seu gateway (Kiwify ou AbacatePay), adicione um webhook apontando para:
@@ -193,6 +192,4 @@ O mesmo fluxo funciona com AbacatePay. Use o endpoint:
 POST https://app.easygoal.com.br/api/webhooks/abacatepay/<api_key>
 ```
 
-<Note>
-  Endpoint AbacatePay externo em construção. Disponível em breve.
-</Note>
+Esse endpoint já está em produção e processa a notificação automaticamente.

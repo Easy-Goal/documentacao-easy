@@ -18,11 +18,7 @@
         "groups": [
           {
             "group": "Visão Geral",
-            "pages": ["index", "introducao/arquitetura", "introducao/ecossistema", "introducao/easy-labs", "introducao/llm-context"]
-          },
-          {
-            "group": "Monorepo",
-            "pages": ["monorepo/estrutura", "monorepo/setup", "monorepo/contribuindo"]
+            "pages": ["index", "introducao/arquitetura", "introducao/ecossistema", "introducao/easy-labs", "introducao/easy-labs-ui", "introducao/llm-context"]
           }
         ]
       },
@@ -48,10 +44,6 @@
               "app-front/produtor/relatorios",
               "app-front/produtor/analytics"
             ]
-          },
-          {
-            "group": "Área Admin",
-            "pages": ["app-front/admin", "app-front/admin-beta", "app-front/admin-analytics"]
           }
         ]
       },

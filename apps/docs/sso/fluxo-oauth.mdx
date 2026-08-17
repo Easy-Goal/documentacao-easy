@@ -16,12 +16,12 @@ description: "Como o SSO autentica usuários e distribui o eg_session para apps 
 ```
 [App] redireciona para SSO /auth/login?redirect_to=<callback_url>
     ↓
-SSO: formulário de login / OAuth (Supabase PKCE)
+SSO: formulário de login / OAuth
     ↓
 SSO /auth/callback:
-  - Troca code → sessão Supabase
-  - Cria/valida perfil em users_company
-  - Assina eg_session JWT (SSO_JWT_SECRET, 30 dias)
+  - Autentica o usuário e cria a sessão
+  - Cria/valida o perfil do usuário
+  - Assina eg_session JWT (validade de 30 dias)
   - Seta cookie eg_session em .easygoal.com.br
   ↓
   [cross-domain autorizado?]
@@ -85,7 +85,7 @@ Para **usuários beta**, a tela inclui aceite do NDA:
     Nome completo, CPF/CNPJ e outros campos obrigatórios.
   </Step>
   <Step title="Aceite do NDA (apenas betas)">
-    Exibido somente se o usuário tem registro em `beta_users`. Timestamp, IP e user agent capturados no servidor e gravados em `beta_users`.
+    Exibido somente se o usuário participa do programa beta. Timestamp, IP e user agent são capturados no servidor no momento do aceite.
   </Step>
   <Step title="Redirecionamento">
     Após salvar: vincula compras guest ao usuário → redireciona para o `redirect_to` original.

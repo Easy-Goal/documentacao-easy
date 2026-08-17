@@ -23,21 +23,13 @@ A plataforma [app.easygoal.com.br](https://app.easygoal.com.br) utiliza um siste
 
 ## Como os perfis são determinados
 
-O perfil é lido a partir dos campos booleanos do objeto `AuthUser`, retornado pelo SSO após a autenticação:
+O perfil é determinado automaticamente por duas flags associadas ao usuário, avaliadas logo após a autenticação:
 
-```typescript
-interface AuthUser {
-  is_super_admin: boolean; // → perfil Admin (exclusivo)
-  is_producer:    boolean; // → perfil Produtor
-  // Todo usuário autenticado tem acesso ao perfil Usuário
-}
-```
-
-| Campo | Valor | Perfil resultante |
-|-------|-------|-------------------|
-| `is_super_admin` | `true` | **Admin** — acessa apenas a área admin |
-| `is_producer` | `true` | **Produtor** — acessa área de produtor + área de usuário |
-| Ambos `false` | — | **Usuário** — acessa área padrão do app |
+| Flag | Valor | Perfil resultante |
+|------|-------|-------------------|
+| Super admin | ativa | **Admin** — acessa apenas a área admin |
+| Produtor | ativa | **Produtor** — acessa área de produtor + área de usuário |
+| Nenhuma das duas | — | **Usuário** — acessa área padrão do app |
 
 <Note>
   O perfil Admin é exclusivo: um super admin não vê o menu de usuário/produtor. Isso garante que a área de gestão não se misture com a navegação de cliente.
@@ -80,7 +72,7 @@ O perfil de Produtor é ativado manualmente pela equipe Easy Goal após avaliaç
     O usuário demonstra interesse em publicar um produto SaaS na plataforma.
   </Step>
   <Step title="Cadastro pelo Admin">
-    Um administrador cria o registro de produtor em `/admin/producers/new`, vinculando ao usuário e à empresa.
+    Um administrador da Easy Goal cria o registro de produtor, vinculando ao usuário e à empresa.
   </Step>
   <Step title="Convite">
     O usuário recebe um convite em `/producer/invitation` para aceitar os termos e configurar o perfil.

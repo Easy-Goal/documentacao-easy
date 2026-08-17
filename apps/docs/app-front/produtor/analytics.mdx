@@ -13,13 +13,13 @@ Ao ter um produto **aprovado**, a plataforma provisiona automaticamente uma prop
 
 <Steps>
   <Step title="Produto aprovado pelo admin">
-    Quando o status do produto muda para `approved`, a plataforma aciona o provisionamento via API do Google.
+    Quando o produto é aprovado, a plataforma aciona o provisionamento via API do Google.
   </Step>
   <Step title="GA4 + GTM criados">
     Uma propriedade GA4 e um container GTM são criados na conta Google da Easy Goal e vinculados ao produto.
   </Step>
-  <Step title="IDs registrados no banco">
-    Os IDs (`ga4_property_id`, `gtm_container_id`) são salvos em `saas_product_tracking_config` e injetados automaticamente no checkout e nas páginas do produto.
+  <Step title="IDs registrados">
+    Os IDs de propriedade e container são salvos e injetados automaticamente no checkout e nas páginas do produto.
   </Step>
 </Steps>
 

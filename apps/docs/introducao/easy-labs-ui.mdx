@@ -1,0 +1,183 @@
+---
+title: "Easy Labs UI"
+description: "Interface visual local para orquestrar sessões de desenvolvimento com IA — dashboard, canvas de arquitetura e session planner."
+---
+
+## O que é
+
+A **Easy Labs UI** é uma aplicação Next.js local que roda em `localhost:3003`. Ela lê os arquivos do seu repositório `easy-labs` e fornece:
+
+- **Dashboard** — prioridades, projetos e sessões recentes com checkboxes interativos
+- **Canvas** — grafo editável do ecossistema de repos (React Flow)
+- **Session Planner** — chat com IA para planejar sessões antes de abrir o terminal
+
+Você continua desenvolvendo **via Claude Code no terminal**. A UI ajuda a organizar o contexto e gerar o prompt otimizado para cada sessão.
+
+## Setup inicial
+
+### 1. Pré-requisitos
+
+- Node.js 18+
+- Conta Anthropic com API key (para o Session Planner)
+- Repositório `easy-labs` clonado localmente
+
+### 2. Instalação
+
+```bash
+cd easy-labs/ui
+npm install
+cp .env.example .env.local
+```
+
+### 3. Configurar `.env.local`
+
+```env
+# Caminho absoluto para a raiz do easy-labs
+EASY_LABS_PATH=/home/seu-usuario/projetos/easy-labs
+
+# SSO para autenticação (ou use um bypass local)
+SSO_URL=https://seu-sso.exemplo.com
+SSO_JWT_SECRET=mesmo_valor_do_sso
+NEXTAUTH_URL=http://localhost:3003
+NEXT_PUBLIC_SSO_URL=https://seu-sso.exemplo.com
+NEXT_PUBLIC_APP_URL=http://localhost:3003
+
+# Segredo para sessão local (gere com: openssl rand -hex 32)
+SESSION_SECRET=sua_string_aleatoria_longa
+
+# Claude API para o Session Planner
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### 4. Rodar
+
+```bash
+npm run dev
+# Acesse: http://localhost:3003
+```
+
+<Note>
+As portas mais baixas (3000–3002) costumam já estar em uso pelos outros serviços do ecossistema local. Use `3003` para a Easy Labs UI para evitar colisão de porta.
+</Note>
+
+## Setup Wizard (workspace zerado)
+
+Se você está começando do zero (fork do easy-labs), a UI detecta que o workspace não foi inicializado e redireciona para o **Setup Wizard** em `/setup`.
+
+O wizard guia você em 4 passos:
+
+<Steps>
+<Step title="Nome do workspace">
+  Defina o nome e descrição do seu ecossistema de projetos.
+</Step>
+<Step title="Adicionar repositórios">
+  Informe o caminho local de cada repo. O wizard detecta automaticamente:
+  - Framework (Next.js, NestJS, React, Vue…)
+  - Linguagem (TypeScript, JavaScript, Python…)
+  - Descrição via package.json ou README
+</Step>
+<Step title="Revisar e gerar">
+  O wizard mostra o que será criado e sugestões de arquitetura baseadas no seu stack.
+  Um clique em "Gerar workspace" cria toda a estrutura:
+  - `ECOSYSTEM.md` com mapa dos repos
+  - `context/[repo]/active.md` e `CLAUDE.md` para cada repo
+  - `roadmap/CURRENT.md` com tarefas iniciais
+  - `memory/INDEX.md`
+  - `easy-labs-config.json`
+</Step>
+<Step title="Pronto">
+  Seu workspace está configurado. Próximos passos sugeridos aparecem na tela.
+</Step>
+</Steps>
+
+## Dashboard
+
+O dashboard lê diretamente os arquivos markdown do `easy-labs` e exibe:
+
+- **Prioridades** com semáforo de cores (🔴 SQL Blockers, 🔴 P1, 🟡 P2, 🟢 P3)
+- **Em execução agora** — seções do `CURRENT.md` com barra de progresso
+- **Sessões recentes** — últimas 8 sessões do `memory/INDEX.md`
+- **Repositórios** — cards clicáveis que abrem o Planner para aquele repo
+
+### Interatividade
+
+Clique nos **checkboxes** para marcar itens como concluídos ou desfazer. A alteração é salva diretamente no arquivo markdown correspondente em tempo real.
+
+## Canvas
+
+Visualização do `ECOSYSTEM.md` como grafo interativo:
+
+- **Nós** — um por repositório com status e descrição
+- **Arestas** — dependências entre repos (SSO → app-front, monorepo → todos)
+- **Editável** — arraste nós, conecte dependências novas
+- **Detalhes** — clique em um nó para ver informações e ir direto ao Planner
+
+## Session Planner
+
+O coração da UI. Ajuda a planejar cada sessão **antes** de abrir o terminal.
+
+### Fluxo típico
+
+1. Selecione o repo e descreva a tarefa
+2. O planner carrega automaticamente o `active.md` e `CLAUDE.md` do repo
+3. A IA de planejamento (Claude) discute o spec com você:
+   - Valida o escopo
+   - Mapeia arquivos afetados
+   - Identifica decisões arquiteturais
+   - Propõe commits no formato Conventional Commits
+4. Ao final, o painel **Output** exibe:
+   - Comando pronto para colar no terminal
+   - Conventional commits sugeridos para cada etapa
+
+### Configuração de modelos
+
+Escolha o modelo separadamente para cada uso:
+
+| Uso | Modelo recomendado |
+|-----|-------------------|
+| AI Planner (discussão) | Sonnet 5 (padrão) |
+| Terminal (Claude Code) | Sonnet 5 para features, Haiku 4.5 para tarefas simples |
+| Decisão arquitetural | Opus 5 |
+
+### Exemplo de output gerado
+
+```bash
+claude --model sonnet "
+CONTEXTO: app-front — adicionar badge Beta User
+SPEC: Mostrar badge 'Beta' no perfil quando is_beta === true no JWT
+REGRAS: Next.js App Router, Server Components por padrão, Tailwind
+COMMITS PLANEJADOS:
+  1. feat(app-front): adicionar badge Beta User para is_beta no perfil
+  2. chore(easy-labs): atualizar contexto — s{N}
+"
+```
+
+## Conventional Commits
+
+O planner sugere automaticamente commits no formato:
+
+```
+type(scope): descrição em português
+```
+
+| Tipo | Quando usar |
+|------|------------|
+| `feat` | Nova funcionalidade |
+| `fix` | Correção de bug |
+| `refactor` | Refatoração sem mudança de comportamento |
+| `chore` | Manutenção, deps, configs |
+| `docs` | Documentação |
+| `test` | Testes |
+| `perf` | Melhorias de performance |
+
+## Uso como open source
+
+A Easy Labs UI foi projetada para ser **forkável**. Qualquer desenvolvedor pode:
+
+1. Fazer fork do repositório `easy-labs`
+2. Clonar localmente
+3. Rodar o Setup Wizard para importar seus próprios repos
+4. Configurar sua própria `ANTHROPIC_API_KEY`
+5. Usar o mesmo fluxo PLAN → DISCUSS → EXECUTE → VALIDATE
+
+O sistema é agnóstico ao ecossistema — funciona para qualquer stack e tamanho de projeto.

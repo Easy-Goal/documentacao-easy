@@ -32,7 +32,7 @@ App /auth/callback: salva eg_session no cookie local → redireciona para destin
 ```
 
 <Note>
-O parâmetro de redirect é `redirect_to` (não `redirect_uri`). Use sempre `redirect_to` ao construir URLs de redirecionamento para o SSO. A URL deve estar cadastrada em **Supabase → Auth → URL Configuration**.
+O parâmetro de redirect é `redirect_to` (não `redirect_uri`). Use sempre `redirect_to` ao construir URLs de redirecionamento para o SSO. A URL de callback do seu app precisa estar previamente registrada junto ao time Easy Goal.
 </Note>
 
 ## Cookie `eg_session`
@@ -45,7 +45,7 @@ Claims do `eg_session`:
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
-| `sub` | `string` | ID do usuário (= `auth.uid()` no Supabase) |
+| `sub` | `string` | ID único do usuário na plataforma |
 | `email` | `string` | E-mail do usuário |
 | `name` | `string` | Nome completo |
 | `avatar_url` | `string` | URL do avatar |
@@ -57,7 +57,7 @@ Claims do `eg_session`:
 | `provider` | `string` | Provider OAuth usado (`google`, `github`, `azure`, `email`) |
 
 <Note>
-Não há claim `role` ou `discord_id` no `eg_session`. A autorização de administrador é verificada no app-front via `requireAdmin()` que consulta o banco diretamente.
+Não há claim `role` ou `discord_id` no `eg_session`. A autorização de administrador é verificada internamente pelo app-front, fora do fluxo de claims do `eg_session`.
 </Note>
 
 ## Integração via `@easygoal/packages/auth` (recomendado)
@@ -65,34 +65,6 @@ Não há claim `role` ou `discord_id` no `eg_session`. A autorização de admini
 Para conectar um app ao SSO, use o package do monorepo. Ele encapsula o `handleAuthCallback`, `EgSessionProvider` e hook `useEgSession`.
 
 Veja o fluxo completo em [Autenticação Cross-Domain](/sso/autenticacao-cross-domain).
-
-## Variáveis de Ambiente do SSO
-
-```env
-# Supabase (mesma instância compartilhada com o app-front)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# URL pública do SSO
-NEXT_PUBLIC_APP_URL=https://sso.easygoal.com.br
-
-# Segredo para assinar eg_session JWT
-SSO_JWT_SECRET=your-jwt-secret
-
-# Webhook — DEVE ser idêntico ao SSO_WEBHOOK_SECRET do app-front
-WEBHOOK_SECRET=your-webhook-secret-key
-
-# Domínio do cookie (produção)
-COOKIE_DOMAIN=.easygoal.com.br
-
-# Email
-RESEND_API_KEY=your-resend-api-key
-```
-
-<Warning>
-`WEBHOOK_SECRET` (SSO) e `SSO_WEBHOOK_SECRET` (app-front) devem ser **idênticos**. Qualquer divergência fará com que todos os webhooks sejam rejeitados com status 401.
-</Warning>
 
 ## Endpoints do SSO
 
@@ -102,7 +74,7 @@ RESEND_API_KEY=your-resend-api-key
 | `GET` | `/auth/signup` | Criar conta |
 | `GET` | `/auth/forgot-password` | Solicitar reset de senha |
 | `GET` | `/auth/reset-password` | Redefinir senha (via link de email) |
-| `GET` | `/auth/callback` | Callback OAuth do Supabase — cria perfil + emite eg_session |
+| `GET` | `/auth/callback` | Callback OAuth interno — cria perfil + emite eg_session |
 | `GET` | `/auth/welcome` | Tela de splash (4s) exibida após login — redireciona para destino |
 | `GET` | `/auth/check` | Verifica se o `eg_session` cookie é válido — retorna JSON |
 | `POST` | `/auth/verify` | Valida `eg_token` temporário de app externo — retorna `eg_session` |
@@ -114,12 +86,8 @@ RESEND_API_KEY=your-resend-api-key
 | `GET` | `/api/webhook/payment` | Health check do endpoint |
 | `GET` | `/api/plans/public` | Planos disponíveis (público) |
 
-## Checklist do SSO
+## Checklist de integração
 
-<Check>Configurar `SSO_JWT_SECRET` para assinar o `eg_session`</Check>
-<Check>Configurar `WEBHOOK_SECRET` (= `SSO_WEBHOOK_SECRET` do app-front)</Check>
-<Check>Configurar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`</Check>
-<Check>Adicionar URLs de redirect em Supabase → Auth → URL Configuration</Check>
-<Check>Registrar URLs de callback em Supabase → Auth → Redirect URLs</Check>
-<Check>Implementar `POST /api/webhook/payment` com verificação HMAC SHA256</Check>
-<Check>Testar webhook com o botão "Testar Webhook" no admin do app-front</Check>
+<Check>Registrar a URL de callback do seu app junto ao time Easy Goal</Check>
+<Check>Implementar `POST /api/webhook/payment` com verificação HMAC SHA256 (se aplicável ao seu fluxo)</Check>
+<Check>Testar o fluxo completo de login e o recebimento do `eg_session`</Check>

@@ -7,15 +7,15 @@ description: "Interface completa para produtores parceiros: gerencie produtos Sa
 
 Usuários com perfil **Produtor** têm acesso a uma área dedicada para gestão dos seus produtos SaaS publicados na plataforma Easy Goal.
 
-O sidebar do produtor exibe as seguintes seções:
+O sidebar do produtor exibe apenas **Meus SaaS**, apontando para `/producer/apps`:
 
 | Seção | Rotas | Descrição |
 |-------|-------|-----------|
-| **Dashboard** | `/producer/dashboard` | KPIs e resumo da operação |
-| **Minha Loja** | `/producer/products` | Produtos publicados e em rascunho |
-| **Relatórios** | `/producer/reports` | Financeiro, aquisição e assinantes |
-| **Integrações** | `/producer/api-keys` | Chaves de API para webhooks |
-| **Afiliados** | `/affiliate/*` | Programa de afiliados (mesmo acesso do usuário) |
+| **Meus SaaS** | `/producer/apps` | Produtos publicados e em rascunho — único item de produtor no sidebar |
+
+<Note>
+`/producer/dashboard`, `/producer/reports`, `/producer/withdrawals` e `/producer/api-keys` são páginas reais, mas hoje **não aparecem no sidebar** — são acessadas por links diretos (ex: cards do dashboard geral) ou pela URL.
+</Note>
 
 ---
 
@@ -32,9 +32,9 @@ Visão consolidada da operação do produtor:
 
 ---
 
-## Meus Produtos
+## Meus SaaS
 
-**Rotas:** `/producer/products` · `/producer/products/new` · `/producer/products/[id]`
+**Rotas:** `/producer/apps` · `/producer/apps/new` · `/producer/apps/[slug]`
 
 Central de gestão de produtos SaaS. Da listagem, o produtor pode:
 
@@ -44,30 +44,15 @@ Central de gestão de produtos SaaS. Da listagem, o produtor pode:
 
 ### Criar novo produto
 
-Ao acessar `/producer/products/new`, o produtor inicia o fluxo de cadastro de um novo produto SaaS. O formulário segue os 7 steps documentados na aba **Para Produtores**:
+Ao acessar `/producer/apps/new`, o produtor preenche um formulário único (não um wizard multi-step):
 
 <Steps>
-  <Step title="Dados básicos">Nome, descrição, categoria e planos de preço do produto.</Step>
-  <Step title="SSO">Configurar a integração com o SSO da Easy Goal para autenticação dos clientes.</Step>
-  <Step title="Pagamentos">Configurar planos e preços no AbacatePay.</Step>
-  <Step title="Analytics">GTM + GA4 são provisionados automaticamente ao produto ser aprovado.</Step>
-  <Step title="Visual">Personalizar cores, logo e identidade visual do produto no ecossistema.</Step>
-  <Step title="Compliance">Adicionar links de Termos de Uso e Política de Privacidade.</Step>
-  <Step title="Testes">Validar o fluxo completo antes da submissão para aprovação.</Step>
+  <Step title="Informações básicas">Nome, slug, descrição e categoria do SaaS.</Step>
+  <Step title="Autenticação">Como os usuários fazem login: EasyGoal gerencia tudo, autenticação própria complementada pelo SSO, ou só SSO EasyGoal (sem distribuição).</Step>
+  <Step title="Cobrança / Gateway">Escolha o gateway inicial: AbacatePay, Kiwify (informando o ID do produto e o papel da EasyGoal — co-produtor ou produtor principal) ou outro gateway via webhook manual.</Step>
 </Steps>
 
-### Steps do produto
-
-**Rota:** `/producer/products/[id]/steps`
-
-Após criar um produto, o produtor gerencia o progresso de cada step. Cada step pode ser:
-
-- **Pendente** — ainda não configurado
-- **Em progresso** — em configuração
-- **Concluído** — validado e aprovado
-- **Rejeitado** — precisa de ajuste (com feedback do admin)
-
-Para enviar um step concluído para revisão: `/producer/products/[id]/steps/[stepId]/submit`
+Planos, API key e afiliados são configurados **depois**, já dentro do produto criado (`/producer/apps/[slug]`), que expõe as abas **Produto**, **Planos**, **Afiliados**, **Co-produtores**, **Feedback**, **Integração** e **Analytics**.
 
 ---
 
@@ -120,19 +105,19 @@ Authorization: Bearer <api-key>
 
 ---
 
-## Equipe & Co-produção
+## Co-produtores
 
-Cada produto pode ter uma equipe (Squad) com co-produtores que recebem split automático em cada pagamento.
+Cada produto tem uma aba **Co-produtores** (chamada "Squad" apenas do lado admin) onde o owner adiciona co-produtores que recebem split automático em cada pagamento.
 
-→ Documentação completa: [Equipe & Co-produção](/app-front/produtor/squad)
+→ Documentação completa: [Co-produção (Squad)](/app-front/produtor/squad)
 
 ---
 
-## Planos & Cobrança
+## Planos & preços
 
-Configure preços, ciclos de cobrança e gateway de pagamento (AbacatePay) para cada produto.
+Configure preços, ciclos de cobrança e o gateway por método de pagamento (AbacatePay, Mercado Pago ou Kiwify) na aba **Planos** de cada produto.
 
-→ Documentação completa: [Planos & Cobrança](/app-front/produtor/cobranca)
+→ Documentação completa: [Planos & preços](/app-front/produtor/cobranca)
 
 ---
 
@@ -140,4 +125,4 @@ Configure preços, ciclos de cobrança e gateway de pagamento (AbacatePay) para 
 
 Produtores também têm acesso à área de afiliados como usuário. Além disso, podem visualizar os afiliados que estão promovendo seus produtos nos relatórios de aquisição.
 
-Para configurar a taxa de comissão dos afiliados de um produto, acesse as configurações do produto em `/producer/products/[id]`.
+Para configurar a taxa de comissão dos afiliados de um produto, acesse a aba **Afiliados** em `/producer/apps/[slug]`.

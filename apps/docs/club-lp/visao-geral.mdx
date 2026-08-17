@@ -5,56 +5,46 @@ description: "Landing page mínima que autentica via SSO EasyGoal, exibe perfil 
 
 ## O que é o Club LP?
 
-O **Club LP** é um projeto de landing page que serve como referência de implementação para qualquer produto SaaS que precise:
+O **Club LP** é a landing page da comunidade Easy Club. Ela serve como referência de implementação para qualquer produto que precise:
 
-1. Autenticar usuários via SSO EasyGoal
-2. Exibir o perfil do usuário logado
-3. Redirecionar para o app principal ou gerenciar assinaturas
+1. Autenticar usuários via SSO EasyGoal usando `@easygoal/packages/auth`
+2. Exibir um banner com dados do usuário logado (nome, se é produtor)
+3. Linkar de volta para o app principal (dashboard ou painel do produtor)
 
-> **Stack:** Next.js 14+ (App Router) — mesmo padrão do app-front.
+> **Stack:** Next.js 14+ (App Router) — mesmo padrão do app-front. Não tem página de perfil dedicada: os dados do usuário aparecem em um banner na própria landing page.
 
 ## Arquitetura do Fluxo
 
 ```
-[Club LP]  →  [SSO]  →  [Club LP callback]  →  [Perfil]
-   (1)          (2)              (3)               (4)
+[Club LP]  →  [SSO]  →  [Club LP callback]  →  [Banner na landing page]
+   (1)          (2)              (3)                     (4)
 
-1. Botão "Acessar" redireciona para SSO com redirect_uri
+1. Botão "Entrar" (via useSSOLogin) redireciona para SSO com redirect_to
 2. SSO autentica (login com conta EasyGoal) e redireciona de volta
-3. Callback recebe access_token + refresh_token, salva em cookie httpOnly
-4. Página de perfil lê cookie, chama SSO /api/me, exibe dados
+3. Callback recebe ?eg_session=<token>, salva em cookie httpOnly (7 dias)
+4. EgSessionProvider lê a sessão via /api/auth/session e alimenta useEgSession()
 ```
 
-## Estrutura de Arquivos
+Não há `access_token`/`refresh_token`/`state` nesse fluxo — o parâmetro é um único `eg_session` (mesmo padrão descrito em [Fluxo OAuth](/sso/fluxo-oauth)).
 
-```
-src/app/
-  page.tsx                     → Landing page (botão de acesso)
-  auth/
-    login/route.ts             → Inicia o fluxo OAuth (gera state, redireciona)
-    callback/route.ts          → Recebe tokens do SSO, salva em cookie
-    logout/route.ts            → Limpa cookies
-  profile/
-    page.tsx                   → Página de perfil (protegida)
-  api/
-    me/route.ts                → Proxy autenticado para SSO /api/me
-middleware.ts                  → Protege /profile, redireciona se não autenticado
-```
+## Estrutura da implementação
+
+Login e logout são disparados **client-side** pelos hooks do package (`useSSOLogin`, `handleSignout`) — não existem rotas `/auth/login` nem `/auth/logout` no próprio Club LP. A landing page usa um provider de sessão, uma rota de callback, um endpoint que decodifica os claims e componentes de UI (banner e botão de login) que consomem esses hooks. Veja o passo a passo completo em [Implementação](/club-lp/implementacao).
 
 ## Variáveis de Ambiente
 
 ```env
 # .env.local do projeto Club
-NEXT_PUBLIC_SSO_URL=https://sso-dev.easygoal.com.br
-NEXT_PUBLIC_APP_URL=https://app.easygoal.com.br
-NEXT_PUBLIC_CLUB_URL=https://club.easygoal.com.br
+NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br
+NEXT_PUBLIC_EASYGOAL_APP_URL=https://app.easygoal.com.br
 
-SECRET_KEY=<gerar-com-node -e "require('crypto').randomBytes(32).toString('hex')">
+# API key do produto registrado no SSO (permite silent auth cross-domain)
+NEXT_PUBLIC_EASY_API_KEY=eg_sandbox_sua_chave_aqui
 ```
 
 ## Checklist do Club LP
 
-<Check>Registrar `redirect_uri` (`https://club.easygoal.com.br/auth/callback`) nas `allowed_redirect_urls` do api_app no app-front</Check>
-<Check>Configurar `.env.local` com as URLs corretas</Check>
-<Check>Testar fluxo completo: `/ → /auth/login → SSO → /auth/callback → /profile`</Check>
+<Check>Registrar o callback (`https://club.easygoal.com.br/auth/callback`) nas redirect URLs do produto no SSO</Check>
+<Check>Configurar `.env.local` com `NEXT_PUBLIC_SSO_URL`, `NEXT_PUBLIC_EASYGOAL_APP_URL` e `NEXT_PUBLIC_EASY_API_KEY`</Check>
+<Check>Testar fluxo completo: **Entrar** → SSO → `/auth/callback` → banner aparece na landing page</Check>
 <Check>Em produção: HTTPS obrigatório (cookies `secure: true`)</Check>

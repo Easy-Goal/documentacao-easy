@@ -1,275 +1,160 @@
 ---
 title: "Implementação do Club LP"
-description: "Código completo para implementar a landing page com autenticação via SSO EasyGoal."
+description: "Exemplo de referência de como o Club LP autentica via SSO EasyGoal com @easygoal/packages/auth."
 ---
 
-## 1. Landing Page
+<Note>
+O Club LP não implementa OAuth manualmente — todo o fluxo (login, callback, sessão) é encapsulado pelo pacote `@easygoal/packages/auth`. O código abaixo é um exemplo de referência do padrão usado — adapte os caminhos de arquivo à estrutura do seu próprio projeto.
+</Note>
+
+## 1. Provider de sessão
+
+Envolve a aplicação com o `EgSessionProvider`, que disponibiliza `useEgSession()` para qualquer componente client-side:
 
 ```tsx
-// src/app/page.tsx
-import Link from 'next/link';
+// src/providers/EasyGoalProvider.tsx
+'use client';
 
-export default function Home() {
-  return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-8 p-6">
-      <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold">Club EasyGoal</h1>
-        <p className="text-muted-foreground text-lg">
-          Acesse conteúdos exclusivos com sua conta EasyGoal.
-        </p>
-      </div>
+import { EgSessionProvider } from '@easygoal/packages/auth/client';
 
-      <a
-        href="/auth/login"
-        className="rounded-lg bg-primary px-8 py-3 text-primary-foreground font-semibold hover:opacity-90 transition"
-      >
-        Acessar minha conta
-      </a>
-    </main>
-  );
+export function EasyGoalProvider({ children }: { children: React.ReactNode }) {
+  return <EgSessionProvider>{children}</EgSessionProvider>;
 }
 ```
 
-## 2. Iniciar Login
+## 2. Botão de login
 
-Gera um `state` aleatório (CSRF protection), salva em cookie e redireciona ao SSO:
+O login é disparado client-side com o hook `useSSOLogin`, que redireciona para o SSO passando `redirect_to` (não `redirect_uri`) e a API key do produto:
 
-```ts
-// src/app/auth/login/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
-import { randomBytes } from 'crypto';
+```tsx
+// src/components/Navbar.tsx
+'use client';
 
-export function GET(_request: NextRequest) {
-  const state = randomBytes(16).toString('hex');
-  const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL!;
-  const clubUrl = process.env.NEXT_PUBLIC_CLUB_URL!;
+import { useSSOLogin } from '@easygoal/packages/auth/client';
 
-  const redirectUri = `${clubUrl}/auth/callback`;
+const SSO_URL = process.env.NEXT_PUBLIC_SSO_URL!;
+const API_KEY = process.env.NEXT_PUBLIC_EASY_API_KEY!;
 
-  const loginUrl = new URL(`${ssoUrl}/auth/login`);
-  loginUrl.searchParams.set('redirect_uri', redirectUri);
-  loginUrl.searchParams.set('state', state);
-
-  const response = NextResponse.redirect(loginUrl.toString());
-
-  response.cookies.set('oauth_state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 5, // 5 minutos
-    path: '/',
+function LoginCTA() {
+  const { login } = useSSOLogin({
+    ssoUrl: SSO_URL,
+    apiKey: API_KEY,
+    callbackPath: '/auth/callback',
   });
 
-  return response;
+  return (
+    <button onClick={login} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white">
+      Entrar
+    </button>
+  );
 }
 ```
 
 ## 3. Callback
 
-Recebe `access_token`, `refresh_token` e `state` do SSO. Valida o state e salva tokens em cookies httpOnly:
+Recebe `?eg_session=<token>` (e opcionalmente `?next=<path>`) do SSO e salva o token em um cookie httpOnly por 7 dias:
 
 ```ts
 // src/app/auth/callback/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  path: '/',
+  maxAge: 60 * 60 * 24 * 7, // 7 dias
+};
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
+  const next = searchParams.get('next') ?? '/';
+  const redirectPath = next.startsWith('/') ? next : '/';
 
-  const accessToken = searchParams.get('access_token');
-  const refreshToken = searchParams.get('refresh_token');
-  const returnedState = searchParams.get('state');
-  const error = searchParams.get('error');
-
-  if (error) {
-    return NextResponse.redirect(new URL(`/?error=${error}`, request.url));
+  const egSession = searchParams.get('eg_session');
+  if (egSession) {
+    const response = NextResponse.redirect(new URL(redirectPath, request.url));
+    response.cookies.set('eg_session', egSession, COOKIE_OPTIONS);
+    return response;
   }
 
-  if (!accessToken || !refreshToken) {
-    return NextResponse.redirect(new URL('/?error=missing_tokens', request.url));
-  }
-
-  // Validar state (CSRF)
-  const savedState = request.cookies.get('oauth_state')?.value;
-  if (!savedState || savedState !== returnedState) {
-    return NextResponse.redirect(new URL('/?error=invalid_state', request.url));
-  }
-
-  const response = NextResponse.redirect(new URL('/profile', request.url));
-
-  response.cookies.delete('oauth_state');
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    path: '/',
-  };
-
-  response.cookies.set('access_token', accessToken, {
-    ...cookieOptions,
-    maxAge: 60 * 60, // 1 hora
-  });
-
-  response.cookies.set('refresh_token', refreshToken, {
-    ...cookieOptions,
-    maxAge: 60 * 60 * 24 * 30, // 30 dias
-  });
-
-  return response;
+  return NextResponse.redirect(new URL('/', request.url));
 }
 ```
 
-## 4. Proxy para o Perfil
+Não há `access_token`, `refresh_token`, `state` nem cookie `oauth_state` nesse fluxo — apenas o `eg_session` já assinado pelo SSO.
 
-Chama o SSO em server-side com o `access_token` do cookie. O browser nunca vê o token diretamente:
+## 4. Endpoint de sessão
+
+Decodifica o payload do `eg_session` (sem verificar assinatura — a verificação já foi feita pelo SSO ao emitir o token) e devolve os claims para o `EgSessionProvider` consumir:
 
 ```ts
-// src/app/api/me/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
+// src/app/api/auth/session/route.ts
+import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  const accessToken = request.cookies.get('access_token')?.value;
+export const dynamic = 'force-dynamic';
 
-  if (!accessToken) {
-    return NextResponse.json({ error: 'Nao autenticado' }, { status: 401 });
+export async function GET() {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get('eg_session')?.value;
+
+  if (raw) {
+    try {
+      const payloadBase64 = raw.split('.')[1];
+      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8'));
+      return NextResponse.json(payload);
+    } catch {
+      // cai para o 401 abaixo
+    }
   }
 
-  const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL!;
-
-  const res = await fetch(`${ssoUrl}/api/me`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    cache: 'no-store',
-  });
-
-  if (res.status === 401) {
-    return NextResponse.json({ error: 'Token expirado' }, { status: 401 });
-  }
-
-  const data = await res.json();
-  return NextResponse.json(data);
+  return NextResponse.json({ error: 'unauthorized', reason: 'missing_session' }, { status: 401 });
 }
 ```
 
 ## 5. Logout
 
 ```ts
-// src/app/auth/logout/route.ts
-import { NextResponse } from 'next/server';
+// src/app/api/auth/signout/route.ts
+import { handleSignout } from '@easygoal/packages/auth/server';
+import type { NextRequest } from 'next/server';
 
-export function GET() {
-  const response = NextResponse.redirect(new URL('/', process.env.NEXT_PUBLIC_CLUB_URL!));
-  response.cookies.delete('access_token');
-  response.cookies.delete('refresh_token');
-  return response;
+export async function POST(request: NextRequest) {
+  return handleSignout();
 }
 ```
 
-## 6. Middleware de Proteção
+## 6. Banner com dados do usuário
 
-```ts
-// middleware.ts
-import { NextResponse, type NextRequest } from 'next/server';
-
-export function middleware(request: NextRequest) {
-  const accessToken = request.cookies.get('access_token')?.value;
-  const { pathname } = request.nextUrl;
-
-  if (pathname.startsWith('/profile')) {
-    if (!accessToken) {
-      return NextResponse.redirect(new URL('/auth/login', request.url));
-    }
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: ['/profile/:path*'],
-};
-```
-
-## 7. Página de Perfil
+Não existe uma página `/profile` dedicada — os dados do usuário aparecem em um banner fixo na própria landing page, lido via `useEgSession()`:
 
 ```tsx
-// src/app/profile/page.tsx
+// src/components/AuthBanner.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEgSession } from '@easygoal/packages/auth/client';
 
-interface UserProfile {
-  id: string;
-  email: string;
-  name: string;
-  avatar_url?: string;
-}
+export function AuthBanner() {
+  const { user, isReady } = useEgSession();
 
-export default function ProfilePage() {
-  const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
-
-  useEffect(() => {
-    fetch('/api/me')
-      .then(async (res) => {
-        if (res.status === 401) {
-          router.push('/auth/login');
-          return;
-        }
-        const data = await res.json();
-        setUser(data);
-      })
-      .finally(() => setLoading(false));
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
-    );
-  }
-
-  if (!user) return null;
+  if (!isReady || !user) return null;
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
-      {user.avatar_url && (
-        <img
-          src={user.avatar_url}
-          alt={user.name}
-          className="h-20 w-20 rounded-full object-cover border"
-        />
-      )}
-
-      <div className="text-center space-y-1">
-        <h2 className="text-2xl font-bold">{user.name}</h2>
-        <p className="text-muted-foreground">{user.email}</p>
-      </div>
-
-      <div className="flex flex-col gap-3 w-full max-w-xs">
-        <a
-          href={`${appUrl}/billing`}
-          className="rounded-lg bg-primary px-6 py-3 text-center text-primary-foreground font-semibold hover:opacity-90 transition"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Gerenciar assinatura no EasyGoal
-        </a>
-
-        <a
-          href="/auth/logout"
-          className="rounded-lg border px-6 py-3 text-center text-sm text-muted-foreground hover:bg-muted transition"
-        >
-          Sair
-        </a>
-      </div>
-    </main>
+    <div className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border px-4 py-2.5">
+      Olá, {user.name ?? user.email}!
+      {user.isProducer && ' Você é um produtor Easy Goal.'}
+    </div>
   );
 }
+```
+
+`user.isProducer` e `user.companyName` vêm diretamente dos claims `is_producer` e `company_name` do `eg_session` — veja [SSO — Visão Geral](/sso/visao-geral) para a lista completa de claims.
+
+## 7. Variáveis de ambiente
+
+```env
+NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br
+NEXT_PUBLIC_EASYGOAL_APP_URL=https://app.easygoal.com.br
+NEXT_PUBLIC_EASY_API_KEY=eg_sandbox_sua_chave_aqui
 ```

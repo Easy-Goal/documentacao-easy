@@ -12,8 +12,9 @@ O Easy Goal é composto por um conjunto de repositórios independentes que traba
 | Repositório | Status | Responsabilidade | Visibilidade |
 |-------------|--------|------------------|--------------|
 | `app-front` | Ativo | App principal — área do usuário, produtor, afiliado e admin | Privado |
+| `api-backend` | Ativo | API central de pagamentos, splits e integrações | Privado |
 | `sso` | Ativo | Servidor de autenticação centralizado (SSO + JWT) | Privado |
-| `easygoal-monorepo` | Ativo | Packages npm compartilhados: `@easygoal/ui`, `@easygoal/auth` | Será público |
+| `easygoal-monorepo` | Ativo | Packages npm compartilhados: `@easygoal/ui`, `@easygoal/auth`, `@easygoal/core` | Será público |
 | `site-easygoal` | Ativo | Site institucional e marketplace público | Privado |
 | `lp-easy-club` | Ativo | Landing page da comunidade Easy Club (Discord) | Privado |
 | `documentacao-easygoal` | Ativo | Documentação técnica pública (Mintlify) | Público |
@@ -29,9 +30,15 @@ sso
 
 app-front
   → autentica via: sso
-  → usa: @easygoal/ui, @easygoal/auth (via easygoal-monorepo)
+  → usa: @easygoal/ui, @easygoal/auth, @easygoal/core (via easygoal-monorepo)
   → banco: Supabase (projeto compartilhado)
   → integração: Discord OAuth (vincular conta do usuário)
+  → pagamentos/splits/webhooks: api-backend
+
+api-backend
+  → valida eg_session com a mesma chave do SSO
+  → gateways: AbacatePay, Mercado Pago, Kiwify
+  → banco: Supabase (mesmo projeto)
 
 site-easygoal
   → autentica via: sso (header com estado de sessão)
@@ -59,6 +66,7 @@ easygoal-monorepo
 | Projeto | Domínio |
 |---------|---------|
 | `app-front` | app.easygoal.com.br |
+| `api-backend` | api.easygoal.com.br |
 | `sso` | sso.easygoal.com.br |
 | `site-easygoal` | easygoal.com.br |
 | `lp-easy-club` | club.easygoal.com.br |
@@ -70,5 +78,7 @@ easygoal-monorepo
 O **SSO** é o ponto central de autenticação. Qualquer app do ecossistema que precise autenticar usuários redireciona para o SSO, que emite uma sessão Supabase reutilizável via cookie `eg_session`.
 
 O **easygoal-monorepo** centraliza identidade visual e utilitários de autenticação. Ao invés de cada app reimplementar o `<Logo />`, tokens de cor ou o callback de auth, todos consomem os packages compartilhados.
+
+O **api-backend** concentra operações mais pesadas: pagamentos, cálculo de splits de squad/co-produção, processamento de webhooks de gateway (AbacatePay, Mercado Pago, Kiwify) e integrações externas. Valida o `eg_session` emitido pelo SSO e roda em um serviço dedicado, separado do app principal.
 
 O **easy-labs** não contém código de produto — é o repositório de contexto e orquestração para devs e agentes de IA, mantendo memória, runbooks e roadmap do ecossistema.

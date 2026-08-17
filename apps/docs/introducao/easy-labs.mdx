@@ -1,70 +1,98 @@
 ---
 title: "Easy Labs"
-description: "O repositório de orquestração do ecossistema Easy Goal — contexto, memória e runbooks para devs e agentes de IA."
+description: "O hub de orquestração do ecossistema — contexto, memória, roadmap e interface visual para devs e agentes de IA."
 ---
 
 ## O que é o Easy Labs
 
-O `easy-labs` é o hub de orquestração do ecossistema Easy Goal. Não contém código de produto — serve como repositório de contexto compartilhado entre desenvolvedores e agentes de IA que trabalham nos projetos.
+O `easy-labs` é o repositório central de contexto do ecossistema. Não contém código de produto — serve como **memória compartilhada** entre desenvolvedores humanos e agentes de IA (Claude Code) que trabalham nos projetos.
 
-É o lugar onde ficam:
+É onde ficam:
 
-- **Memória de sessões** — histórico de decisões e o que foi feito em cada sessão
-- **Contexto por repositório** — regras técnicas, stack, padrões e pendências de cada projeto
-- **Roadmap ativo** — o que está em desenvolvimento agora e o que está no backlog
-- **Runbooks** — passo a passo para tarefas recorrentes (migrations, onboarding de repos, etc.)
-- **ADRs** — Architecture Decision Records para decisões técnicas importantes
+| O que | Onde | Para quê |
+|-------|------|----------|
+| Tarefas ativas por repo | `context/[repo]/active.md` | Retomar trabalho sem perder contexto |
+| Regras técnicas por repo | `context/[repo]/CLAUDE.md` | Orientar o agente antes de codar |
+| Roadmap ativo | `roadmap/CURRENT.md` | Prioridades e estado do que está em desenvolvimento |
+| Histórico de sessões | `memory/sessions/` | O que foi feito, quando e por quê |
+| Decisões arquiteturais | `memory/decisions/` | ADRs numerados para decisões recorrentes |
+| Runbooks | `runbooks/` | Passo a passo para tarefas padronizadas |
+| Interface visual | `ui/` | Dashboard, canvas e session planner |
 
-## Estrutura
+## Estrutura atual
 
 ```
 easy-labs/
 ├── START_HERE.md          ← protocolo de início de sessão
-├── ECOSYSTEM.md           ← mapa dos repositórios
-├── memory/
-│   ├── INDEX.md           ← índice de toda a memória
-│   ├── sessions/          ← histórico por data (YYYY-MM-DD.md)
-│   ├── projects/          ← estado atual por projeto
-│   └── decisions/         ← ADRs numerados
+├── PIPELINE.md            ← esteira PLAN → DISCUSS → EXECUTE → VALIDATE
+├── ECOSYSTEM.md           ← mapa dos repositórios e dependências
+├── easy-labs-config.json  ← configuração do workspace
 ├── context/
 │   └── [repo]/
-│       ├── CLAUDE.md      ← regras técnicas para agentes de IA
-│       ├── stack.md       ← imports, padrões e convenções de código
-│       └── pending.md     ← lista de pendências do repositório
+│       ├── active.md      ← tarefas acionáveis (máx 60 linhas)
+│       └── CLAUDE.md      ← regras técnicas para agentes de IA
+├── memory/
+│   ├── INDEX.md           ← índice de toda a memória
+│   ├── sessions/          ← histórico por sessão (YYYY-MM-DD-sNN.md)
+│   └── decisions/         ← ADRs numerados
 ├── roadmap/
-│   ├── CURRENT.md         ← etapas ativas
+│   ├── CURRENT.md         ← etapas ativas e em execução
 │   ├── BACKLOG.md         ← próximas etapas
-│   └── DONE.md            ← histórico de etapas concluídas
-└── runbooks/              ← guias de execução de tarefas
+│   └── DONE.md            ← histórico concluído
+├── runbooks/              ← guias de execução
+├── templates/             ← templates de sessão e subagente
+└── ui/                    ← interface visual (Next.js)
 ```
 
-## Para quem é
+## Pipeline obrigatório
 
-O easy-labs é para **devs e agentes de IA** que trabalham no ecossistema Easy Goal.
+Todo trabalho nos repos segue a esteira:
 
-- **Devs humanos** — usam o easy-labs para retomar contexto entre sessões, consultar decisões arquiteturais passadas e seguir runbooks para tarefas padronizadas.
-- **Agentes de IA** — leem o easy-labs antes de começar qualquer trabalho para entender regras, padrões e o estado atual do projeto, evitando retrabalho e decisões inconsistentes.
+```
+PLAN → DISCUSS → EXECUTE → VALIDATE
+```
+
+| Etapa | O que fazer |
+|-------|------------|
+| **PLAN** | Ler `context/[repo]/active.md` + seção ativa do `roadmap/CURRENT.md` |
+| **DISCUSS** | Alinhar spec, mapear arquivos afetados, decidir commits |
+| **EXECUTE** | Implementar no repo de produto com commits atômicos |
+| **VALIDATE** | Verificar build, atualizar `active.md`, commitar easy-labs |
 
 ## Como iniciar uma sessão
 
-Ao começar a trabalhar em qualquer repositório do ecossistema:
+```bash
+# No terminal, iniciando com contexto mínimo
+claude --model sonnet "
+Leia context/app-front/active.md e roadmap/CURRENT.md (seção Em execução agora).
+Siga PIPELINE.md. Tarefa: [descrever o que fazer]
+"
+```
 
-1. **Leia `START_HERE.md`** — define o protocolo de sessão e o que ler dependendo do contexto
-2. **Leia `roadmap/CURRENT.md`** — confirme o que está ativo
-3. **Leia `context/[repo]/pending.md`** — veja as pendências do repositório que vai trabalhar
-4. **Leia `context/[repo]/CLAUDE.md`** — entenda as regras técnicas antes de codar
+Ou use o **Session Planner** da interface visual para montar esse comando automaticamente.
 
 ## Como encerrar uma sessão
 
-Ao terminar o trabalho:
-
-1. Atualize `context/[repo]/pending.md` — marque o que foi feito, adicione novas pendências
-2. Crie `memory/sessions/YYYY-MM-DD.md` usando o template disponível
-3. Atualize `roadmap/CURRENT.md` se algum item foi concluído
-4. Faça commit das atualizações:
+1. Atualizar `context/[repo]/active.md` — marcar `[x]`, adicionar novos bloqueadores
+2. Criar `memory/sessions/YYYY-MM-DD-sNN.md` usando o template
+3. Atualizar `roadmap/CURRENT.md` se itens foram concluídos
+4. Commitar:
 
 ```bash
-cd /path/to/easy-labs
+cd easy-labs
 git add .
-git commit -m "chore: atualizar contexto — sessão YYYY-MM-DD"
+git commit -m "chore: atualizar contexto — s{N} descrição curta"
 ```
+
+## Orçamento de tokens por sessão
+
+| Cenário | Arquivos lidos | Tokens estimados |
+|---------|---------------|-----------------|
+| Continuando trabalho | active.md + CURRENT.md (seção ativa) | ~600 |
+| Cold start | ECOSYSTEM + active.md + CURRENT.md + última sessão | ~1.000 |
+| Bug fix | CLAUDE.md + ADR relevante | ~650 |
+| Subagente | Trecho do CLAUDE.md + escopo da tarefa | ≤ 800 |
+
+<Tip>
+Use `active.md` (máx 60 linhas) como fonte principal. Nunca passe o arquivo inteiro para subagentes — recorte apenas a seção relevante.
+</Tip>

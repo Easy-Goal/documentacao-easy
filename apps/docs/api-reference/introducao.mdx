@@ -5,16 +5,20 @@ description: "Visão geral das APIs do ecossistema EasyGoal: SSO e Webhooks."
 
 ## APIs do Ecossistema EasyGoal
 
-O ecossistema EasyGoal expõe duas superfícies de API principais:
+O ecossistema EasyGoal expõe duas superfícies de API documentadas aqui — e uma terceira, o `api-backend`, que hoje concentra a maior parte dos endpoints ativos de pagamento e integrações, ainda sem referência dedicada nesta seção:
 
 <Columns cols={2}>
   <Card title="SSO API" icon="key" href="/api-reference/sso-api">
     Endpoints de autenticação: `/auth/login` e `/api/me`. Usados pelo Club LP e qualquer app registrado.
   </Card>
   <Card title="Webhooks" icon="webhook" href="/api-reference/webhook">
-    Endpoint `POST /api/webhook/payment` do SSO. Chamado pelo app-front com payload assinado via HMAC SHA256.
+    Endpoint interno `POST /api/webhook/payment` do SSO, documentado aqui apenas para dar visão completa do fluxo — não é chamado por integrações externas.
   </Card>
 </Columns>
+
+<Note>
+O `api-backend` é a API central de pagamentos, splits de squad e webhooks de gateway (AbacatePay, Mercado Pago, Kiwify). Roda em `api.easygoal.com.br`, mas ainda não tem uma referência de endpoints própria nesta seção.
+</Note>
 
 ## Autenticação
 
@@ -26,28 +30,17 @@ Usado nos endpoints do SSO pelo Club LP e apps registrados:
 Authorization: Bearer <access_token>
 ```
 
-O `access_token` é emitido pelo SSO após autenticação e tem validade de **1 hora** por padrão (`JWT_ACCESS_EXPIRES=3600`).
+O `access_token` é emitido pelo SSO após autenticação e tem validade de **1 hora** por padrão.
 
 ### HMAC SHA256 (Webhooks)
 
-Usado pelo app-front ao chamar o SSO:
-
-```ts
-import { createHmac } from 'crypto';
-
-const signature = createHmac('sha256', process.env.SSO_WEBHOOK_SECRET!)
-  .update(JSON.stringify(bodyWithoutSignature))
-  .digest('hex');
-```
-
-O SSO verifica a assinatura usando `timingSafeEqual` para prevenir timing attacks.
+Mecanismo interno, usado pelo app-front ao notificar o SSO sobre pagamentos confirmados. A assinatura é verificada com comparação de tempo constante (`timingSafeEqual`) para prevenir timing attacks.
 
 ## Base URLs
 
-| Ambiente | SSO | app-front |
-|----------|-----|-----------|
-| Produção | `https://sso.easygoal.com.br` | `https://app.easygoal.com.br` |
-| Desenvolvimento | `http://localhost:3001` | `http://localhost:3000` |
+| Ambiente | api-backend | SSO | app-front |
+|----------|-------------|-----|-----------|
+| Produção | `https://api.easygoal.com.br` | `https://sso.easygoal.com.br` | `https://app.easygoal.com.br` |
 
 ## Códigos de Status
 

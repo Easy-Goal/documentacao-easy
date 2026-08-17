@@ -13,13 +13,13 @@ O repositório da documentação mantém um arquivo `llms.txt` na raiz — um gu
 
 Ao referenciar esse arquivo em uma sessão de IA, o assistente passa a conhecer:
 
-- Quais projetos existem, suas portas e domínios de produção
-- O fluxo de autenticação cross-domain (SSO → app-front)
-- Os endpoints reais do SSO e o formato dos webhooks
-- As variáveis de ambiente corretas de cada projeto
+- Quais apps compõem o ecossistema e seus domínios de produção
+- O fluxo de autenticação cross-domain (SSO → app-front e demais apps)
+- Os endpoints públicos do SSO e o formato dos webhooks
+- As variáveis de ambiente relevantes para integração
 - A paleta de cores, tokens CSS e padrões de componente
-- Como instalar e usar `@easygoal/ui` e `@easygoal/auth`
-- As rotas do app-front por perfil (usuário, produtor, admin)
+- Como instalar e usar `@easygoal/packages` (`/ui`, `/auth`, `/core`)
+- Os perfis de acesso do app-front (usuário, produtor, admin)
 
 ---
 
@@ -70,31 +70,32 @@ https://docs.easygoal.com.br/llms.txt
 
 <AccordionGroup>
   <Accordion title="Ecossistema e projetos">
-    | Projeto | Domínio (prod) | Porta (dev) |
-    |---------|----------------|-------------|
-    | SSO | sso.easygoal.com.br | **3000** |
-    | app-front | app.easygoal.com.br | **3001** |
-    | Docs | docs.easygoal.com.br | 3002 |
+    | Projeto | Domínio (prod) |
+    |---------|----------------|
+    | api-backend | api.easygoal.com.br |
+    | SSO | sso.easygoal.com.br |
+    | app-front | app.easygoal.com.br |
+    | Docs | docs.easygoal.com.br |
 
-    Stack: Next.js 14+ + TypeScript + Supabase nos projetos principais.
+    Stack: app-front, SSO e Club LP usam Next.js 14+ com TypeScript.
   </Accordion>
 
   <Accordion title="Fluxo de autenticação">
     ```
-    [app-front] detecta sem sessão Supabase
+    [app-front] detecta sem eg_session
         ↓
     Redireciona para: {SSO_URL}/auth/login?redirect_to=<callback_url>
         ↓
-    SSO autentica, obtém access_token + refresh_token
+    SSO autentica via Supabase, assina o eg_session JWT
         ↓
-    SSO redireciona para callback_url com os tokens
+    SSO redireciona para callback_url com ?eg_session=<token>
         ↓
-    [app-front /auth/callback] estabelece sessão Supabase local
+    [app-front /auth/callback] salva eg_session no cookie local
         ↓
     Redireciona para /dashboard
     ```
 
-    Parâmetro de redirect: `redirect_to` (não `redirect_uri`).
+    Parâmetro de redirect: `redirect_to` (não `redirect_uri`). Veja o fluxo completo em [Fluxo OAuth](/sso/fluxo-oauth).
   </Accordion>
 
   <Accordion title="Webhook de pagamento">
@@ -114,13 +115,16 @@ https://docs.easygoal.com.br/llms.txt
   </Accordion>
 
   <Accordion title="Packages @easygoal">
-    | Package | Conteúdo |
+    | Subpath | Conteúdo |
     |---------|----------|
-    | `@easygoal/ui` | `<Logo />` + tokens de cor |
-    | `@easygoal/auth` | `AuthProvider`, `useAuthSession`, `createCallbackRoute`, `updateSession` |
+    | `@easygoal/packages/ui` | `<Logo />` + tokens de cor |
+    | `@easygoal/packages/auth` | `AuthProvider`, `useEgSession`, `createCallbackRoute`, `handleAuthCallback` |
+    | `@easygoal/packages/core` | Utilitários compartilhados do monorepo |
+
+    Todos os subpaths vêm de um único pacote instalável:
 
     ```bash
-    npm install "https://github.com/Easy-Goal/easygoal-ui#main"
+    npm install "github:Easy-Goal/easygoal-monorepo"
     ```
   </Accordion>
 </AccordionGroup>

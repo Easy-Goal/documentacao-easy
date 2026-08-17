@@ -5,33 +5,24 @@ description: "Endpoints de autenticação e perfil do serviço SSO EasyGoal."
 
 ## GET /auth/login
 
-Inicia o fluxo de autenticação OAuth. Valida `redirect_uri` contra a lista de URIs permitidas e redireciona para o formulário de login.
+Inicia o fluxo de autenticação. Renderiza o formulário de login e, após autenticação, redireciona para `redirect_to` com o `eg_session` assinado.
 
 **Query Parameters:**
 
-<ParamField query="redirect_uri" type="string" required>
-  URL de callback onde o SSO enviará os tokens após autenticação. Deve estar registrada em `ALLOWED_REDIRECT_URIS`.
+<ParamField query="redirect_to" type="string" required>
+  URL de callback para onde o SSO redireciona após o login. Deve estar previamente registrada junto ao time Easy Goal.
 </ParamField>
 
-<ParamField query="state" type="string">
-  Token aleatório para proteção CSRF. Gerado pelo app cliente e verificado no callback.
+<ParamField query="api_key" type="string">
+  API key do produto registrado no SSO. Usada para exibir o nome do produto na tela de login e habilitar o fluxo de app externo.
 </ParamField>
 
-**Exemplos de resposta:**
+**Respostas:**
 
-```
-302 Found
-Location: https://sso.easygoal.com.br/auth/form
-Set-Cookie: pending_redirect_uri=...; HttpOnly; SameSite=Lax
-Set-Cookie: pending_state=...; HttpOnly; SameSite=Lax
-```
-
-```json
-// 400 Bad Request
-{
-  "error": "redirect_uri nao autorizado"
-}
-```
+| Status | Descrição |
+|--------|-----------|
+| `200` | Renderiza o formulário de login |
+| `302` | Redireciona para `/auth/welcome` → `redirect_to` com `?eg_session=<token>` após login bem-sucedido |
 
 ---
 
@@ -71,23 +62,24 @@ Retorna os dados do perfil do usuário autenticado.
 
 ---
 
-## Como o Club LP consome `/api/me`
+## Como apps consomem a sessão
 
-O Club LP cria um proxy em `/api/me` que chama o SSO em server-side. O `access_token` nunca é exposto ao browser:
+Apps que integram via `@easygoal/packages/auth` (ex: Club LP) não chamam `/api/me` diretamente. Em vez disso, decodificam o `eg_session` salvo em cookie httpOnly através de uma rota própria:
 
 ```ts
-// Club LP → src/app/api/me/route.ts
-export async function GET(request: NextRequest) {
-  const accessToken = request.cookies.get('access_token')?.value;
+// app cliente → src/app/api/auth/session/route.ts
+export async function GET() {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get('eg_session')?.value;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_SSO_URL}/api/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: 'no-store',
-  });
+  if (raw) {
+    const payloadBase64 = raw.split('.')[1];
+    const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8'));
+    return NextResponse.json(payload);
+  }
 
-  const data = await res.json();
-  return NextResponse.json(data);
+  return NextResponse.json({ error: 'unauthorized', reason: 'missing_session' }, { status: 401 });
 }
 ```
 
-O browser do usuário chama `/api/me` (no próprio domínio do Club LP), que internamente chama `sso.easygoal.com.br/api/me` com o token do cookie.
+O `EgSessionProvider` do package chama essa rota internamente e alimenta o hook `useEgSession()`. `GET /api/me` (documentado acima) é um endpoint separado, usado por integrações que ainda trabalham com o access token diretamente — não pelo fluxo `eg_session`.

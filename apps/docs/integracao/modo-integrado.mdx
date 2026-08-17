@@ -37,8 +37,13 @@ O claim `plan_slug` é atualizado pelo SSO automaticamente quando:
 
 ## Gateways disponíveis
 
-### AbacatePay (padrão)
+A Easy Goal integra três gateways no modo integrado: **AbacatePay**, **Mercado Pago** e **Kiwify**. O gateway não é mais uma escolha única por produto — uma matriz método × gateway (PIX, boleto, cartão) decide qual processador atende cada método de pagamento.
+
+### AbacatePay
 PIX e boleto. Cobrança recorrente automática. Checkout hospedado na Easy Goal.
+
+### Mercado Pago
+Processador próprio da Easy Goal, com reconciliação ativa (sem depender só de webhook). Usado por produtos que precisam de cartão de crédito recorrente.
 
 ### Kiwify (EG gerencia)
 A Easy Goal registra e gerencia o produto no painel Kiwify em nome do produtor.
@@ -46,13 +51,11 @@ A Easy Goal registra e gerencia o produto no painel Kiwify em nome do produtor.
 
 ## Registrar produto
 
-1. Acesse `/admin/saas-products` → **Novo Produto**
-2. Defina `integration_type = integrated`
-3. Escolha `payment_gateway` (abacatepay ou kiwify)
-4. Defina preço, frequência e URL de callback pós-pagamento
+1. Crie o produto na Área do Produtor e escolha o modo **Integrado** na etapa de autenticação/cobrança
+2. Na aba **Planos** do produto, configure preço, ciclo de cobrança e defina o gateway por método de pagamento (matriz PIX/boleto/cartão) no modal **Configurar checkout**
 
 O checkout será disponibilizado automaticamente em `/checkout/<slug>`.
 
 <Note>
-  Para detalhes do checkout integrado via AbacatePay, veja [Cobrança & Pagamentos](/app-front/produtor/cobranca).
+  Para detalhes de planos e ciclos de cobrança, veja [Planos & preços](/app-front/produtor/cobranca). Para a configuração visual e a matriz de gateways, veja [Checkout](/app-front/produtor/checkout).
 </Note>

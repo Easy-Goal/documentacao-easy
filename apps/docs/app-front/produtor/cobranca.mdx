@@ -1,63 +1,59 @@
 ---
-title: "Planos & Cobrança"
-description: "Configure preços, ciclos de cobrança e métodos de pagamento para seus produtos SaaS via AbacatePay."
+title: "Planos & preços"
+description: "Configure preços, ciclos de cobrança e o gateway de pagamento para seus produtos SaaS na aba Planos."
 ---
 
 ## Visão geral
 
-O sistema de cobrança da Easy Goal usa o **AbacatePay** como gateway de pagamento. Cada produto tem sua configuração de billing armazenada na tabela `saas_product_billing`.
+Não existe uma aba "Cobrança" na Área do Produtor. Preço, ciclo e gateway são configurados na aba **Planos** de cada produto. Cada plano é um registro independente — um produto pode ter vários planos ao mesmo tempo.
+
+A Easy Goal integra **três gateways**: AbacatePay, Mercado Pago e Kiwify. O gateway efetivo por método de pagamento (PIX, boleto, cartão) é configurado à parte, no modal **Configurar checkout** — veja [Checkout](/app-front/produtor/checkout).
 
 ---
 
-## Configurar cobrança de um produto
+## Configurar um plano
 
-Acesse **Produtos → [Produto] → aba "Cobrança"** e defina:
+Na aba **Planos**, cada plano tem:
 
 | Campo | Descrição | Exemplo |
 |---|---|---|
-| **Preço base** | Valor em centavos | `9700` = R$ 97,00 |
-| **Ciclo de cobrança** | `monthly`, `yearly`, `one_time` | `monthly` |
-| **Trial** | Dias gratuitos antes da primeira cobrança | `7` |
-| **Moeda** | ISO 4217 | `BRL` |
+| **Nome** | Nome do plano | `Plano Mensal` |
+| **Preço** | Valor do plano | `97.00` |
+| **Ciclo de cobrança** | Mensal, trimestral, anual ou pagamento único | Mensal |
+| **Tipo** | Plano base, upsell ou addon | Base |
+| **Posição** | Ordem de exibição no checkout | `1` |
+| **Ativo** | Se o plano aparece no checkout | `true` |
+
+Não existe campo de **trial** (dias gratuitos) no formulário de criação de plano.
 
 <Info>
-  Um produto pode ter **múltiplos planos** de cobrança (ex: mensal + anual). Cada plano é uma entrada separada em `saas_product_billing`.
+  Um produto pode ter **múltiplos planos** (ex: mensal + trimestral + anual), cada um configurado de forma independente.
 </Info>
 
 ---
 
 ## Ciclos disponíveis
 
-| Ciclo | Valor `billing_cycle` | Descrição |
-|---|---|---|
-| Mensal | `monthly` | Cobrança recorrente todo mês |
-| Anual | `yearly` | Cobrança única anual (geralmente com desconto) |
-| Pagamento único | `one_time` | Sem recorrência |
+| Ciclo | Descrição |
+|---|---|
+| Mensal | Cobrança recorrente todo mês |
+| Trimestral | Cobrança recorrente a cada 3 meses |
+| Anual | Cobrança recorrente anual (geralmente com desconto) |
+| Pagamento único | Sem recorrência |
 
 ---
 
-## Vídeo explicativo
+## Quando a aba Planos fica bloqueada
 
-{/* <iframe
-  width="100%"
-  height="400"
-  src="https://www.youtube.com/embed/VIDEO_ID?rel=0"
-  title="Como configurar cobrança do produto"
-  frameBorder="0"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-  allowFullScreen
-  style={{ borderRadius: '12px' }}
-/> */}
-
-<Note>Vídeo explicativo em breve.</Note>
+Para produtos com checkout externo (ex: Kiwify ou gateway próprio do produtor), a aba **Planos** fica **bloqueada** com um cadeado. Nesse modo, o preço exibido no checkout é o configurado pelo admin junto ao gateway externo — editar os planos aqui não teria efeito no checkout real.
 
 ---
 
 ## Pré-requisitos
 
 <Steps>
-  <Step title="Conta AbacatePay">
-    Configure sua conta em **Configurações → Pagamentos**. Você precisará do `abacatepay_account_id` e `abacatepay_email`.
+  <Step title="Conta do gateway">
+    Configure sua conta (AbacatePay, Mercado Pago ou Kiwify, conforme o gateway escolhido) em **Configurações → Pagamentos**.
   </Step>
   <Step title="Chave PIX">
     Necessária para receber saques do seu saldo. Cadastre em **Configurações → Pagamentos**.

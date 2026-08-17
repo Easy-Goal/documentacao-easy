@@ -95,8 +95,8 @@ EG_API_KEY=eg_live_sua_chave_aqui
 
 ### Pré-requisitos para apps externos
 
-1. Produto registrado no SSO com `status: approved`
-2. URL do callback cadastrada em `saas_products.redirect_urls`
+1. Produto registrado e aprovado no SSO
+2. URL do callback registrada no cadastro do produto
 3. API key ativa para o produto
 
 ---
@@ -121,31 +121,10 @@ O `/auth/check` é ideal para **middleware de proteção de rotas** — não red
 
 ---
 
-## Proteção de páginas admin via `auth/check`
-
-<Note>
-**Funcionalidade planejada.** Para proteger páginas da documentação (ou qualquer app) exclusivamente para administradores, seria necessário adicionar `is_super_admin` ao `EgSessionClaims` no SSO. O campo existe em `AuthUser` do monorepo mas ainda não é injetado no `eg_session` JWT. Após essa adição, o middleware pode verificar `session.is_super_admin === true` via `/auth/check`.
-</Note>
-
-Fluxo planejado:
-```ts
-// middleware.ts
-const { authenticated, session } = await checkSession(request);
-
-if (pathname.startsWith('/admin')) {
-  if (!authenticated || !session?.is_super_admin) {
-    return NextResponse.redirect('/');
-  }
-}
-```
-
----
-
 ## Checklist de Integração
 
 <Check>Produto registrado no SSO (apenas para apps externos)</Check>
-<Check>URL do callback cadastrada em `saas_products.redirect_urls`</Check>
+<Check>URL do callback registrada no cadastro do produto</Check>
 <Check>Callback route implementado com `createCallbackRoute`</Check>
 <Check>`EgSessionProvider` adicionado ao layout raiz</Check>
-<Check>URL do callback cadastrada em **Supabase → Auth → Redirect URLs**</Check>
-<Check>Variáveis `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SSO_URL` configuradas</Check>
+<Check>Variável `NEXT_PUBLIC_SSO_URL` configurada</Check>
