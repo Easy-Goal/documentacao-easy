@@ -7,7 +7,7 @@ description: "Configure preços, ciclos de cobrança e o gateway de pagamento pa
 
 Não existe uma aba "Cobrança" na Área do Produtor. Preço, ciclo e gateway são configurados na aba **Planos** de cada produto. Cada plano é um registro independente — um produto pode ter vários planos ao mesmo tempo.
 
-A Easy Goal integra **três gateways**: AbacatePay, Mercado Pago e Kiwify. O gateway efetivo por método de pagamento (PIX, boleto, cartão) é configurado à parte, no modal **Configurar checkout** — veja [Checkout](/app-front/produtor/checkout).
+Cada produtor escolhe o próprio gateway. O dinheiro entra na conta do produtor, e a Easy Goal só lê os eventos enviados por webhook.
 
 ---
 
@@ -53,7 +53,7 @@ Para produtos com checkout externo (ex: Kiwify ou gateway próprio do produtor),
 
 <Steps>
   <Step title="Conta do gateway">
-    Configure sua conta (AbacatePay, Mercado Pago ou Kiwify, conforme o gateway escolhido) em **Configurações → Pagamentos**.
+    Configure sua conta no gateway que você escolheu e conecte o webhook na aba **Integração**.
   </Step>
   <Step title="Chave PIX">
     Necessária para receber saques do seu saldo. Cadastre em **Configurações → Pagamentos**.

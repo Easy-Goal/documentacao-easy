@@ -37,7 +37,7 @@ app-front
 
 api-backend
   → valida eg_session com a mesma chave do SSO
-  → gateways: AbacatePay, Mercado Pago, Kiwify
+  → gateways: o de cada produtor, por webhook
   → banco: Supabase (mesmo projeto)
 
 site-easygoal
@@ -79,6 +79,6 @@ O **SSO** é o ponto central de autenticação. Qualquer app do ecossistema que 
 
 O **easygoal-monorepo** centraliza identidade visual e utilitários de autenticação. Ao invés de cada app reimplementar o `<Logo />`, tokens de cor ou o callback de auth, todos consomem os packages compartilhados.
 
-O **api-backend** concentra operações mais pesadas: pagamentos, cálculo de splits de squad/co-produção, processamento de webhooks de gateway (AbacatePay, Mercado Pago, Kiwify) e integrações externas. Valida o `eg_session` emitido pelo SSO e roda em um serviço dedicado, separado do app principal.
+O **api-backend** concentra operações mais pesadas, como o processamento dos webhooks dos gateways dos produtores.
 
 O **easy-labs** não contém código de produto — é o repositório de contexto e orquestração para devs e agentes de IA, mantendo memória, runbooks e roadmap do ecossistema.

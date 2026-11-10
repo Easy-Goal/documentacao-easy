@@ -49,7 +49,7 @@ Ao acessar `/producer/apps/new`, o produtor preenche um formulário único (não
 <Steps>
   <Step title="Informações básicas">Nome, slug, descrição e categoria do SaaS.</Step>
   <Step title="Autenticação">Como os usuários fazem login: EasyGoal gerencia tudo, autenticação própria complementada pelo SSO, ou só SSO EasyGoal (sem distribuição).</Step>
-  <Step title="Cobrança / Gateway">Escolha o gateway inicial: AbacatePay, Kiwify (informando o ID do produto e o papel da EasyGoal — co-produtor ou produtor principal) ou outro gateway via webhook manual.</Step>
+  <Step title="Cobrança / Gateway">Escolha o gateway da sua conta: Kiwify, Hotmart ou AbacatePay. O pagamento entra direto para você, e a Easy Goal recebe os eventos por webhook.</Step>
 </Steps>
 
 Planos e API key são configurados **depois**, já dentro do produto criado (`/producer/apps/[slug]`), que expõe as abas **Produto**, **Planos**, **Co-produtores**, **Feedback**, **Integração** e **Analytics**.
@@ -115,6 +115,6 @@ Cada produto tem uma aba **Co-produtores** (chamada "Squad" apenas do lado admin
 
 ## Planos & preços
 
-Configure preços, ciclos de cobrança e o gateway por método de pagamento (AbacatePay, Mercado Pago ou Kiwify) na aba **Planos** de cada produto.
+Configure os planos na aba **Planos** de cada produto. Preços e cobrança ficam no seu gateway.
 
 → Documentação completa: [Planos & preços](/app-front/produtor/cobranca)

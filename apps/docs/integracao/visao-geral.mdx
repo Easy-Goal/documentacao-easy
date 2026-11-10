@@ -25,7 +25,7 @@ A Easy Goal integra **três** gateways de pagamento:
 
 | Gateway | Modo Integrado | Modo Externo |
 |---|---|---|
-| **AbacatePay** | EG gerencia checkout e cobrança recorrente | Produtor usa AbacatePay próprio; EG recebe webhook |
+| **AbacatePay** | Descontinuado | Produtor usa AbacatePay próprio; EG recebe webhook |
 | **Mercado Pago** | EG gerencia checkout e cobrança recorrente | Não documentado como opção externa hoje |
 | **Kiwify** | EG gerencia o produto no painel Kiwify | Produtor tem produto no Kiwify; EG recebe webhook |
 
@@ -40,7 +40,7 @@ No modo integrado, o gateway efetivo pode variar **por método de pagamento** (P
 ```
 Quero usar o checkout da Easy Goal?
 ├─ Sim → Modo INTEGRADO
-│        └─ Escolha o gateway por método de pagamento: AbacatePay, Mercado Pago ou Kiwify (EG gerencia)
+│        └─ Descontinuado: cada produtor usa o próprio gateway
 └─ Não → Modo EXTERNO
          ├─ Tenho produto Kiwify     → webhook Kiwify     → EG valida
          ├─ Tenho produto AbacatePay → webhook AbacatePay → EG valida

@@ -76,16 +76,15 @@ redirect(
 
 ---
 
-## Arquitetura de Pagamento → SSO
+## Arquitetura de Pagamento
 
 ```
-[Usuário] → [app-front] → paga via AbacatePay
-                ↓ webhook AbacatePay confirma
-        app-front ──POST HMAC SHA256──▶ SSO /api/webhook/payment
-                                               ↓
-                                  SSO cria usuário / gera link de cadastro
-                                  (envia email via Resend — em implementação)
+Cliente paga cada ferramenta direto ao vendedor (gateway do produtor)
+                ↓ webhook do gateway
+        api-backend registra o evento → acesso e faturas
 ```
+
+O gateway dos serviços da própria Easy Goal ainda não foi definido. A confirmação é manual no admin.
 
 ---
 
@@ -192,9 +191,6 @@ NEXT_PUBLIC_TYPEBOT_STEP_VISUAL_IDENTITY=
 NEXT_PUBLIC_TYPEBOT_STEP_COMPLIANCE=
 NEXT_PUBLIC_TYPEBOT_STEP_TESTING=
 
-# AbacatePay
-ABACATEPAY_API_KEY=
-ABACATEPAY_WEBHOOK_SECRET=
 
 # Webhook para o SSO (DEVE ser idêntico ao WEBHOOK_SECRET do SSO)
 SSO_WEBHOOK_URL=http://localhost:3000/api/webhook/payment
