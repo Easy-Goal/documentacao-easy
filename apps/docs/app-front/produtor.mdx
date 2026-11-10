@@ -1,11 +1,11 @@
 ---
-title: "Área do Produtor"
-description: "Interface completa para produtores parceiros: gerencie produtos SaaS, acompanhe relatórios, configure equipes e integrações via API."
+title: "Área do Builder"
+description: "Área dos builders: gerencie produtos, acompanhe relatórios, configure equipes e integrações via API."
 ---
 
 ## Visão geral
 
-Usuários com perfil **Produtor** têm acesso a uma área dedicada para gestão dos seus produtos SaaS publicados na plataforma Easy Goal.
+Builders têm o perfil **Produtor** no app e acessam uma área dedicada aos próprios produtos. Um produto liberado entra na curadoria e pode virar parte da entrega de um cliente.
 
 O sidebar do produtor exibe apenas **Meus SaaS**, apontando para `/producer/apps`:
 
@@ -52,7 +52,7 @@ Ao acessar `/producer/apps/new`, o produtor preenche um formulário único (não
   <Step title="Cobrança / Gateway">Escolha o gateway inicial: AbacatePay, Kiwify (informando o ID do produto e o papel da EasyGoal — co-produtor ou produtor principal) ou outro gateway via webhook manual.</Step>
 </Steps>
 
-Planos, API key e afiliados são configurados **depois**, já dentro do produto criado (`/producer/apps/[slug]`), que expõe as abas **Produto**, **Planos**, **Afiliados**, **Co-produtores**, **Feedback**, **Integração** e **Analytics**.
+Planos e API key são configurados **depois**, já dentro do produto criado (`/producer/apps/[slug]`), que expõe as abas **Produto**, **Planos**, **Co-produtores**, **Feedback**, **Integração** e **Analytics**.
 
 ---
 
@@ -118,11 +118,3 @@ Cada produto tem uma aba **Co-produtores** (chamada "Squad" apenas do lado admin
 Configure preços, ciclos de cobrança e o gateway por método de pagamento (AbacatePay, Mercado Pago ou Kiwify) na aba **Planos** de cada produto.
 
 → Documentação completa: [Planos & preços](/app-front/produtor/cobranca)
-
----
-
-## Programa de afiliados (como produtor)
-
-Produtores também têm acesso à área de afiliados como usuário. Além disso, podem visualizar os afiliados que estão promovendo seus produtos nos relatórios de aquisição.
-
-Para configurar a taxa de comissão dos afiliados de um produto, acesse a aba **Afiliados** em `/producer/apps/[slug]`.

@@ -1,21 +1,21 @@
 ---
 title: "Perfis de Usuário"
-description: "O app-front possui três perfis distintos: Usuário, Produtor e Admin. Cada perfil tem acesso a áreas e funcionalidades específicas."
+description: "O app da Easy Goal tem três perfis: Cliente, Builder e Admin. Cada um vê apenas o que precisa."
 ---
 
-## Sistema de Perfis
+## Sistema de perfis
 
-A plataforma [app.easygoal.com.br](https://app.easygoal.com.br) utiliza um sistema de três perfis baseado em flags no registro do usuário. O perfil é determinado automaticamente no momento do login.
+O app [app.easygoal.com.br](https://app.easygoal.com.br) define o perfil por flags no registro do usuário, avaliadas logo após o login.
 
 <Columns cols={3}>
-  <Card title="Usuário" icon="user">
-    Perfil padrão de todo usuário autenticado. Pode navegar pelo catálogo SaaS, contratar serviços, gerenciar assinaturas e participar do programa de afiliados.
+  <Card title="Cliente" icon="user">
+    Perfil padrão. Acompanha entregáveis e faturas.
   </Card>
-  <Card title="Produtor" icon="store">
-    Perfil para criadores de produtos SaaS. Habilita a área de gestão de produtos, métricas, submissões MVP e integração via API Keys.
+  <Card title="Builder" icon="store">
+    Quem constrói com a Easy Goal. No app, aparece como perfil de Produtor. Vê a área do cliente e a gestão dos próprios SaaS.
   </Card>
   <Card title="Admin" icon="shield">
-    Acesso exclusivo à equipe interna Easy Goal. Gerencia usuários, empresas, produtores, aprova produtos e administra o sistema completo.
+    Equipe interna da Easy Goal. Administra usuários, empresas, builders e produtos.
   </Card>
 </Columns>
 
@@ -23,16 +23,14 @@ A plataforma [app.easygoal.com.br](https://app.easygoal.com.br) utiliza um siste
 
 ## Como os perfis são determinados
 
-O perfil é determinado automaticamente por duas flags associadas ao usuário, avaliadas logo após a autenticação:
-
 | Flag | Valor | Perfil resultante |
 |------|-------|-------------------|
-| Super admin | ativa | **Admin** — acessa apenas a área admin |
-| Produtor | ativa | **Produtor** — acessa área de produtor + área de usuário |
-| Nenhuma das duas | — | **Usuário** — acessa área padrão do app |
+| Super admin | ativa | **Admin**, com acesso apenas à área admin |
+| Produtor | ativa | **Builder**, com área de produtor e área do cliente |
+| Nenhuma das duas | — | **Cliente** |
 
 <Note>
-  O perfil Admin é exclusivo: um super admin não vê o menu de usuário/produtor. Isso garante que a área de gestão não se misture com a navegação de cliente.
+  Um super admin não vê o menu de cliente ou de builder. A área de gestão não se mistura com a navegação de cliente.
 </Note>
 
 ---
@@ -41,45 +39,39 @@ O perfil é determinado automaticamente por duas flags associadas ao usuário, a
 
 ```
 Admin (is_super_admin = true)
-├── Gestão de usuários, empresas, produtores
-├── Aprovação de produtos SaaS
-├── Controle financeiro (saques, afiliados)
+├── Gestão de usuários, empresas e builders
+├── Aprovação de produtos
 └── Sistema (configurações, admins, logs)
 
-Produtor (is_producer = true)
-├── Área do usuário (catálogo, marketplace, afiliados)
-└── Área do produtor
-    ├── Dashboard de métricas
-    ├── Gestão de produtos SaaS
-    ├── Acompanhamento de submissões
-    └── Chaves de API
+Builder (is_producer = true)
+├── Área do cliente
+└── Meus SaaS, roadmap, eventos e guias
 
-Usuário (padrão)
-├── Dashboard pessoal
-├── Catálogo SaaS + Marketplace
-├── Meus serviços + Cobranças
-└── Programa de afiliados
+Cliente (padrão)
+├── Dashboard
+├── Entregáveis
+└── Faturas
 ```
 
 ---
 
-## Ativação do perfil Produtor
+## Como um builder entra
 
-O perfil de Produtor é ativado manualmente pela equipe Easy Goal após avaliação. O fluxo é:
+Builders entram por convite ou pelo desafio.
 
 <Steps>
-  <Step title="Solicitação">
-    O usuário demonstra interesse em publicar um produto SaaS na plataforma.
+  <Step title="Convite ou desafio">
+    O builder recebe um convite da equipe Easy Goal ou chega pelo desafio.
   </Step>
-  <Step title="Cadastro pelo Admin">
-    Um administrador da Easy Goal cria o registro de produtor, vinculando ao usuário e à empresa.
+  <Step title="Cadastro pelo admin">
+    Um administrador cria o registro de produtor, vinculado ao usuário e à empresa.
   </Step>
-  <Step title="Convite">
-    O usuário recebe um convite em `/producer/invitation` para aceitar os termos e configurar o perfil.
+  <Step title="Aceite">
+    O builder aceita o convite em `/invitation` e completa os dados.
   </Step>
   <Step title="Verificação">
-    O admin altera o status do produtor de `pending` para `verified`. A partir desse momento o menu de produtor aparece no sidebar.
+    O admin altera o status de `pending` para `verified`. A partir daí, o menu de produtor aparece no sidebar.
   </Step>
 </Steps>
 
-Status possíveis de um produtor: `pending` · `verified` · `suspended` · `rejected`
+Status possíveis: `pending` · `verified` · `suspended` · `rejected`

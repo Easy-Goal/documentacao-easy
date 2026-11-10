@@ -1,24 +1,57 @@
 ---
-title: "EasyGoal — Documentação"
-description: "Ecossistema para criação, distribuição e monetização de produtos SaaS no marketplace EasyGoal."
+title: "Easy Goal — Documentação"
+description: "Como a Easy Goal entrega resultado, sob demanda ou por assinatura, e como construir com o ecossistema."
 ---
 
-## Bem-vindo ao EasyGoal
+## O que é a Easy Goal
 
-A EasyGoal é uma plataforma que conecta **produtores** de softwares SaaS a usuários finais, fornecendo infraestrutura completa para autenticação, pagamentos e distribuição via marketplace.
+O cliente quer o resultado. A IA barateou a entrada, mas não barateou a governança nem a entrega de resultado. A Easy Goal implementa apenas o necessário e cobra o preço que vale o resultado, sob demanda ou por assinatura.
+
+Somos a ponte entre quem precisa do resultado e quem sabe construir, sem o vínculo que o modelo tradicional exige.
+
+<Columns cols={3}>
+  <Card title="Quem precisa do resultado" icon="bullseye">
+    Contrata a entrega sem montar equipe nem gerir fornecedor.
+  </Card>
+  <Card title="Quem constrói" icon="hammer">
+    Presta o serviço, conecta a própria ferramenta à solução, ou faz os dois.
+  </Card>
+  <Card title="A Easy Goal, no meio" icon="shield-check">
+    Cuida da governança, confere cada etapa e responde pela entrega.
+  </Card>
+</Columns>
+
+## Padrão Easy Goal: make it simple
+
+<Steps>
+  <Step title="Objetivo">
+    O cliente traz a meta. A Easy Goal a transforma em entregáveis técnicos, com prazo.
+  </Step>
+  <Step title="Configuração simples">
+    Cada ferramenta é indicada com o motivo de estar ali. O cliente contrata pelos links que recebe.
+  </Step>
+  <Step title="Conferência">
+    Assinaturas, pagamentos e comprovantes são conferidos antes do início das entregas.
+  </Step>
+  <Step title="Entrega e aprovação">
+    Cada entregável passa pela aprovação do cliente antes do próximo.
+  </Step>
+</Steps>
+
+## Componentes do ecossistema
 
 <Columns cols={2}>
   <Card title="app-front" icon="browser" href="/introducao/arquitetura">
-    Marketplace principal. Gerencia produtos, assinaturas e pagamentos.
+    App onde o cliente acompanha entregáveis e faturas e o builder gerencia os próprios produtos.
   </Card>
   <Card title="api-backend" icon="server" href="/introducao/arquitetura">
-    API central de pagamentos, splits, webhooks e integrações.
+    API central de pagamentos, webhooks e integrações.
   </Card>
   <Card title="SSO" icon="key" href="/sso/visao-geral">
     Serviço de autenticação centralizado. Emite o `eg_session` JWT e integra os apps do ecossistema.
   </Card>
   <Card title="Club LP" icon="star" href="/club-lp/visao-geral">
-    Landing page de produto de exemplo que autentica via SSO e exibe perfil do usuário.
+    Landing page de exemplo que autentica via SSO e exibe o perfil do usuário.
   </Card>
 </Columns>
 
@@ -28,8 +61,8 @@ A EasyGoal é uma plataforma que conecta **produtores** de softwares SaaS a usu�
   <Card title="Arquitetura do Ecossistema" icon="diagram-project" href="/introducao/arquitetura">
     Entenda como app-front, api-backend, SSO e Club LP se comunicam.
   </Card>
-  <Card title="Para Produtores" icon="rocket" href="/app-front/produtor">
-    Como gerenciar seu produto SaaS na Área do Produtor.
+  <Card title="Para Builders" icon="rocket" href="/app-front/produtor">
+    Como gerenciar seu produto na Área do Produtor.
   </Card>
   <Card title="Integrar SSO" icon="plug" href="/sso/fluxo-oauth">
     Guia completo para implementar o fluxo OAuth no seu app.

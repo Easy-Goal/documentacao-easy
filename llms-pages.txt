@@ -90,8 +90,8 @@ const docsUrl = process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.easygoal.com.b
 | Página (rota real) | Link de docs |
 |--------------------|-------------|
 | `/dashboard` | `{DOCS_URL}/introducao/arquitetura` |
-| `/saas` | `{DOCS_URL}/club-lp/visao-geral` |
-| `/billing` | `{DOCS_URL}/club-lp/visao-geral` |
+| `/services` | `{DOCS_URL}/app-front/usuario` |
+| `/billing` | `{DOCS_URL}/app-front/usuario` |
 | `/producer/products` | `{DOCS_URL}/typebot/visao-geral` |
 | `/producer/products/[id]/steps` | `{DOCS_URL}/typebot/visao-geral` |
 | step 1 submit | `{DOCS_URL}/typebot/step-1-dados-basicos` |
@@ -168,8 +168,8 @@ const docsUrl = process.env.NEXT_PUBLIC_DOCS_URL ?? 'https://docs.easygoal.com.b
 ```
 app-front:
   /dashboard                                    → {DOCS_URL}/introducao/arquitetura
-  /saas                                         → {DOCS_URL}/club-lp/visao-geral
-  /billing                                      → {DOCS_URL}/club-lp/visao-geral
+  /services                                     → {DOCS_URL}/app-front/usuario
+  /billing                                      → {DOCS_URL}/app-front/usuario
   /producer/products                            → {DOCS_URL}/typebot/visao-geral
   /producer/products/[id]/steps                 → {DOCS_URL}/typebot/visao-geral
   /producer/products/[id]/steps/[id]/submit     → {DOCS_URL}/typebot/step-N-*
