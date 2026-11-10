@@ -5,3 +5,8 @@
 # Draft content
 drafts/
 *.draft.mdx
+
+# Fora do MVP (ADR 070): voltam quando as áreas forem reativadas
+app-front/afiliado.mdx
+app-front/usuario-avaliacoes.mdx
+app-front/beta-program.mdx

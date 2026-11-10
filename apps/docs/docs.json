@@ -30,11 +30,11 @@
             "pages": ["app-front/perfis"]
           },
           {
-            "group": "Área do Usuário",
-            "pages": ["app-front/usuario", "app-front/usuario-avaliacoes", "app-front/afiliado", "app-front/roadmap", "app-front/beta-program"]
+            "group": "Área do Cliente",
+            "pages": ["app-front/usuario", "app-front/roadmap"]
           },
           {
-            "group": "Área do Produtor",
+            "group": "Área do Builder",
             "pages": [
               "app-front/produtor",
               "app-front/produtor/squad",

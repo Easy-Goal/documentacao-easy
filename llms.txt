@@ -9,9 +9,9 @@
 
 ## O que é o EasyGoal?
 
-EasyGoal (grafado "Easy Goal" em textos de interface) é uma plataforma que conecta
-**produtores de software SaaS** a usuários finais, fornecendo infraestrutura completa
-para autenticação, pagamentos e distribuição via marketplace.
+EasyGoal (grafado "Easy Goal" em textos de interface) vende resultado, sob demanda ou por
+assinatura. É a ponte entre **quem precisa do resultado** e **quem constrói**, com governança
+e responsabilidade pela entrega. Padrão Easy Goal: make it simple.
 
 ### Regras de nomenclatura
 
@@ -28,7 +28,7 @@ para autenticação, pagamentos e distribuição via marketplace.
 | Projeto    | Domínio (prod)              | Porta (dev) | Descrição |
 |------------|-----------------------------|-----------|----|
 | SSO        | sso.easygoal.com.br         | **3000**  | Autenticação centralizada com Supabase Auth |
-| app-front  | app.easygoal.com.br         | **3001**  | Marketplace: produtos SaaS, assinaturas, pagamentos |
+| app-front  | app.easygoal.com.br         | **3001**  | App: entregáveis e faturas do cliente, área do builder e admin |
 | Docs       | docs.easygoal.com.br        | 3002      | Documentação Mintlify (este repositório) |
 
 > **Atenção:** SSO roda na porta 3000, app-front na 3001. O app-front aponta
@@ -232,12 +232,10 @@ Todas dentro do route group `(authenticated)` — protegidas por Supabase Auth.
 | Rota | Label sidebar |
 |------|---------------|
 | `/dashboard` | Dashboard |
-| `/saas` | SaaS |
 | `/saas/[slug]` | Detalhe SaaS |
-| `/marketplace` | Serviços Avulsos |
-| `/marketplace/[serviceId]/request` | Solicitar serviço |
-| `/services` | Meus Serviços |
-| `/billing` | Cobranças |
+| `/marketplace/[serviceId]/request` | Detalhe do entregável |
+| `/services` | Entregáveis |
+| `/billing` | Faturas |
 | `/settings` | Configurações |
 | `/settings/email` | Alterar email |
 | `/settings/password` | Alterar senha |

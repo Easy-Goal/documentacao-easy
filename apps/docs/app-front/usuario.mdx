@@ -1,18 +1,18 @@
 ---
-title: "Área do Usuário"
-description: "Funcionalidades disponíveis para todos os usuários autenticados: dashboard, catálogo SaaS, marketplace, serviços, cobranças e programa de afiliados."
+title: "Área do Cliente"
+description: "O que o cliente acompanha no app da Easy Goal: entregáveis, faturas e dados da conta."
 ---
 
 ## Visão geral
 
-Todo usuário autenticado tem acesso à área padrão do app. O sidebar exibe quatro seções principais:
+No app, o cliente acompanha o que a Easy Goal vai entregar e vê as faturas. Quem precisa de um resultado não precisa navegar por catálogo nem escolher ferramenta sozinho.
 
-| Seção | Rotas | Descrição |
-|-------|-------|-----------|
-| **Dashboard** | `/dashboard` | Resumo de assinaturas, serviços ativos e atividade recente |
-| **Produtos & Serviços** | `/saas`, `/marketplace`, `/services`, `/billing` | Catálogo, contratos e cobranças |
-| **Afiliados** | `/affiliate/*` | Programa de comissões e configurações de saque |
-| **Configurações** | `/settings/*` | Email, senha e dados da conta |
+| Seção | Rota | Descrição |
+|-------|------|-----------|
+| **Dashboard** | `/dashboard` | Ferramentas ativas, entregáveis e faturas pendentes |
+| **Entregáveis** | `/services` | O que a Easy Goal vai entregar e em que etapa cada item está |
+| **Faturas** | `/billing` | Histórico dos entregáveis e das ferramentas |
+| **Configurações** | `/settings` | Perfil, e-mail, senha e empresa |
 
 ---
 
@@ -20,112 +20,52 @@ Todo usuário autenticado tem acesso à área padrão do app. O sidebar exibe qu
 
 **Rota:** `/dashboard`
 
-Painel central com visão consolidada do que o usuário tem ativo na plataforma. Exibe:
-
-- Assinaturas SaaS ativas
-- Serviços em andamento (marketplace)
-- Comissões de afiliado pendentes
-- Atividade recente da conta
+Mostra três números: ferramentas ativas, entregáveis e faturas pendentes. Cada um leva à tela correspondente.
 
 ---
 
-## Catálogo SaaS
-
-**Rotas:** `/saas` · `/saas/[slug]`
-
-Listagem de todos os produtos SaaS disponíveis na plataforma. Cada produto foi revisado e aprovado pela equipe Easy Goal antes de aparecer aqui.
-
-**Página de produto** (`/saas/[slug]`):
-- Descrição, funcionalidades e planos de assinatura
-- Botão de contratação (redireciona para checkout)
-- Status da assinatura atual do usuário (caso já seja cliente)
-
----
-
-## Marketplace
-
-**Rotas:** `/marketplace` · `/marketplace/[serviceId]/request`
-
-Catálogo de serviços avulsos oferecidos por produtores parceiros (implantações, consultorias, customizações, etc.).
-
-Para solicitar um serviço:
-
-<Steps>
-  <Step title="Navegar pelo catálogo">
-    Acesse `/marketplace` e encontre o serviço desejado.
-  </Step>
-  <Step title="Enviar solicitação">
-    Em `/marketplace/[serviceId]/request`, preencha os detalhes do projeto e envie a solicitação.
-  </Step>
-  <Step title="Aguardar retorno">
-    O produtor responsável recebe a solicitação e entra em contato para negociação e execução.
-  </Step>
-</Steps>
-
----
-
-## Meus Serviços
+## Entregáveis
 
 **Rota:** `/services`
 
-Lista de serviços contratados pelo usuário. Permite acompanhar o andamento das solicitações enviadas pelo marketplace.
+Cada entregável aparece com a etapa atual. Os ativos ficam no topo e os concluídos ou cancelados, no histórico.
+
+| Etapa | O que significa |
+|-------|-----------------|
+| Coletando dados | A Easy Goal precisa de informações suas |
+| Aguardando orçamento | A proposta está sendo preparada |
+| Aguardando assinatura | O contrato está pronto para você assinar |
+| Aguardando pagamento | O link de pagamento foi gerado |
+| Em andamento | A Easy Goal está executando |
+| Concluído | Entregue |
+| Cancelado | Não será executado |
 
 ---
 
-## Cobranças
+## Faturas
 
 **Rota:** `/billing`
 
-Histórico de cobranças e gestão de contratações. A página tem duas abas:
+A tela tem duas abas.
 
-### Aba — Serviços Avulsos
+### Entregáveis
 
-Lista as solicitações de serviço enviadas pelo marketplace, com status atualizado em tempo real:
+Lista os entregáveis com a situação de cada um. Quando há contrato ou pagamento pendente, o botão correspondente aparece no item. Se a Easy Goal pedir mais informações, o item mostra o aviso **Informação solicitada** e o botão **Responder**.
 
-| Status | Descrição |
-|--------|-----------|
-| `pending_quote` / `collecting` | Aguardando proposta ou mais informações |
-| `awaiting_signature` | Contrato pronto para assinar — botão **Assinar** disponível |
-| `awaiting_payment` | Link de pagamento gerado — botão **Pagar** disponível |
-| `in_progress` | Serviço em execução |
-| `completed` | Serviço concluído |
-| `cancelled` | Cancelado |
+### Ferramentas
 
-Se o produtor solicitou informações adicionais, aparece o badge **"Informação solicitada"** com botão **Responder**.
-
-### Aba — Assinaturas SaaS
-
-Lista de assinaturas de produtos SaaS contratados. Para cada assinatura são exibidos: valor, frequência de cobrança, data de contratação, data de início e próxima cobrança prevista.
+Lista as assinaturas das ferramentas contratadas para os seus entregáveis, com valor, frequência, data de contratação e próxima cobrança.
 
 | Status | Descrição |
 |--------|-----------|
-| `pending` | Aguardando pagamento — botão **Pagar agora** com link AbacatePay |
-| `active` | Assinatura ativa |
-| `suspended` | Suspensa por inadimplência — botão **Pagar fatura e reativar** disponível |
-| `cancelled` | Cancelada pelo usuário |
+| `pending` | Aguardando pagamento |
+| `active` | Ativa |
+| `suspended` | Suspensa por inadimplência, com botão para pagar a fatura e reativar |
+| `cancelled` | Cancelada |
 | `expired` | Expirada |
-| `failed` | Pagamento falhou |
+| `failed` | Pagamento não concluído |
 
-**Cancelar assinatura:** disponível para assinaturas `active` ou `pending`. Ao clicar, um modal solicita o motivo do cancelamento (obrigatório) e um comentário opcional.
-
-**Reativar por inadimplência:** assinaturas `suspended` exibem um alerta e o botão **"Pagar fatura e reativar"** que abre o link de cobrança AbacatePay diretamente.
-
-<Note>
-  O processamento de pagamentos é feito via **AbacatePay**. PIX, cartão de crédito e débito são suportados dependendo da configuração do produto.
-</Note>
-
----
-
-## Avaliações & Feedback
-
-**Rota:** `/reviews`
-
-Após contratar um produto SaaS ou serviço, o usuário pode deixar uma **avaliação pública** (nota + comentário visível no marketplace) e um **feedback privado** (visível apenas para o produtor e admin).
-
-- Edite ou remova sua avaliação a qualquer momento em `/reviews`
-- Cada usuário pode deixar uma avaliação por produto
-
-Veja a documentação completa em [Avaliações & Feedback](/app-front/usuario-avaliacoes).
+**Cancelar:** disponível para assinaturas `active` ou `pending`. Um modal pede o motivo do cancelamento.
 
 ---
 
@@ -133,12 +73,9 @@ Veja a documentação completa em [Avaliações & Feedback](/app-front/usuario-a
 
 **Rotas:** `/settings` · `/settings/email` · `/settings/password`
 
-Área de gestão da conta pessoal:
-
-- **`/settings/email`** — Alterar e-mail (somente para contas criadas com e-mail/senha)
-- **`/settings/password`** — Alterar senha (somente para contas criadas com e-mail/senha)
-- Contas autenticadas via Google/GitHub/Azure exibem apenas uma mensagem informativa sobre o provedor
+- **`/settings/email`:** alterar e-mail, para contas criadas com e-mail e senha.
+- **`/settings/password`:** alterar senha, para contas criadas com e-mail e senha.
 
 <Tip>
-  Usuários que fazem login via OAuth (Google, GitHub, Microsoft) não têm senha gerenciada dentro da plataforma. Para alterar, acesse diretamente o provedor de identidade.
+  Quem entra com Google, GitHub ou Microsoft altera a senha diretamente no provedor.
 </Tip>
