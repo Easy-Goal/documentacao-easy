@@ -1,0 +1,29 @@
+---
+title: "Atribuição (UTM)"
+description: "Levar a origem da visita do seu SaaS até a Easy Goal pelo login do SSO."
+---
+
+O cookie de um domínio não chega a outro. Por isso, cada SaaS guarda a origem da visita no **próprio domínio** e a envia ao SSO no parâmetro `att` do link de login. O SSO grava o primeiro e o último toque de campanha de cada usuário, por app de origem.
+
+## Com o pacote da Easy Goal
+
+```ts
+import { readAttributionFromUrl, withAttribution } from '@easygoal/packages/core';
+
+// Na página de entrada: lê UTM e click IDs da URL (null se não houver campanha).
+const touch = readAttributionFromUrl(window.location.href, { referrer: document.referrer });
+if (touch) localStorage.setItem('eg_att', JSON.stringify(touch));
+
+// No botão de entrar: acrescenta att ao link de login do SSO.
+const saved = localStorage.getItem('eg_att');
+const loginUrl = withAttribution(ssoLoginUrl, saved ? JSON.parse(saved) : null);
+```
+
+Campos lidos: `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `gclid`, `gbraid`, `wbraid`, `fbclid`, `ttclid` e `msclkid`, além da página de entrada e do referrer.
+
+## Regras
+
+- O SSO guarda o `att` por 2 horas entre login, cadastro e OAuth. No cadastro por e-mail, ele segue junto com a confirmação.
+- O primeiro toque nunca é sobrescrito. O último só muda com um toque mais recente.
+- Visita sem UTM nem click ID não conta como campanha.
+- Falha ao gravar a atribuição nunca bloqueia o login.

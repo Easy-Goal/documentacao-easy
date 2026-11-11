@@ -1,0 +1,41 @@
+---
+title: "Métricas e acesso"
+description: "Como os eventos do gateway viram vendas, receita e acesso ao SaaS."
+---
+
+## Eventos
+
+Cada webhook vira **um** evento normalizado, com o mesmo formato para qualquer gateway. O mesmo evento enviado de novo pelo gateway não é contado duas vezes.
+
+| Tipo | Quando |
+|---|---|
+| `sale.approved` | Pagamento aprovado |
+| `subscription.started` | Assinatura começou |
+| `subscription.renewed` | Cobrança recorrente paga |
+| `subscription.past_due` | Cobrança recorrente falhou |
+| `subscription.canceled` | Assinatura cancelada |
+| `sale.refunded` | Estorno |
+| `sale.chargeback` | Contestação |
+
+## Métricas da aba Vendas (últimos 30 dias)
+
+| Métrica | Definição |
+|---|---|
+| **Vendas** | Eventos `sale.approved` |
+| **Renovações** | Eventos `subscription.renewed` |
+| **Receita bruta** | Soma de `sale.approved` + `subscription.renewed` |
+| **Estornos** | Soma de `sale.refunded` + `sale.chargeback` |
+| **Receita líquida** | Bruta menos estornos |
+| **Acessos ativos** | Compradores com acesso `active` ou `past_due` |
+
+Entram nas somas só os eventos **verificados** e **fora do sandbox**. Os demais aparecem como alertas de saúde do webhook.
+
+## Acesso
+
+O acesso fica ligado ao **e-mail do comprador**, porque a compra pode acontecer antes do cadastro. Quando a pessoa entra no SSO com o mesmo e-mail, o acesso aparece para ela.
+
+- O plano vem do **id do produto no gateway**. Se o id não for conhecido e o produto tiver um só plano com acesso, vale esse plano. Senão, vale o acesso padrão `access`.
+- Estorno, cancelamento e atraso só alteram um acesso **que já existe**.
+- Um evento antigo que chega atrasado não volta o status.
+
+O SaaS consulta o acesso pela rota interna `GET /internal/entitlements/:userId`. Veja [Webhook](/api-reference/webhook).

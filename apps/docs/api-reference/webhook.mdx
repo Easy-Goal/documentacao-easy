@@ -1,90 +1,78 @@
 ---
-title: "Webhook de Pagamento"
-description: "Endpoint POST /api/webhook/payment do SSO. Chamado pelo app-front quando um pagamento é confirmado."
+title: "Webhook do gateway e acesso"
+description: "Rota única que recebe o webhook do gateway do builder, e as rotas internas que o SaaS usa para ler acesso e planos."
 ---
 
-## POST /api/webhook/payment
+## POST /webhooks/:gateway/:api_key
 
-Recebe notificações de pagamento do app-front, verificadas via assinatura HMAC SHA256. Esse canal é interno ao ecossistema Easy Goal — documentado aqui para dar visão completa do fluxo de liberação de acesso, mas produtores e integrações externas não precisam chamá-lo nem replicá-lo.
+Recebe o webhook do gateway **do builder**. A Easy Goal só lê: não chama o gateway de volta e não guarda a chave secreta dele.
 
-**URL:** `https://sso.easygoal.com.br/api/webhook/payment`
+**URL:** `https://api.easygoal.com.br/webhooks/{gateway}/{api_key}`
 
-**Headers:**
-
-<ParamField header="Content-Type" type="string" required>
-  `application/json`
+<ParamField path="gateway" type="string" required>
+  `abacatepay`. A Kiwify segue em `/webhooks/kiwify/{api_key}` até migrar. Gateway sem adaptador responde `404`.
 </ParamField>
 
-## Payload
+<ParamField path="api_key" type="string" required>
+  Chave de API do produto. Chave inválida ou revogada responde `401`.
+</ParamField>
+
+### Verificação
+
+| Situação | Resposta | Grava? | Libera acesso? |
+|---|---|---|---|
+| Segredo e assinatura corretos | `200` | Sim, `verified` | Sim |
+| Segredo correto, sem assinatura | `200` | Sim, `unverified` | Não |
+| Segredo errado ou corpo alterado | `401` | Não | Não |
+
+Detalhes por gateway: [AbacatePay](/integracao/gateways/abacatepay).
+
+### Resposta
+
+```json
+{ "received": true, "status": "stored" }
+```
+
+`status`: `stored` (gravado), `duplicate` (o gateway reenviou o mesmo evento) ou `ignored` (evento que não interessa, como saque ou transferência).
+
+---
+
+## Rotas internas do SaaS
+
+Autenticadas com a chave do app white label (a mesma das demais rotas `/internal`). Servem para o SaaS ler acesso e planos sem falar com o gateway.
+
+### GET /internal/entitlements/:userId
+
+Acessos do usuário nos produtos ligados ao app.
 
 ```json
 {
-  "event": "purchase.completed",
-  "customer": {
-    "email": "usuario@email.com",
-    "name": "João Silva",
-    "phone": "+5511999999999"
-  },
-  "product": {
-    "id": "uuid-do-produto",
-    "plan_slug": "easy-standard"
-  },
-  "company": {
-    "name": "Empresa Ltda",
-    "cnpj": "00.000.000/0001-00"
-  },
-  "signature": "a3f8b2c1d4e5f6..."
+  "entitlements": [
+    {
+      "saas_product_id": "uuid",
+      "entitlement_key": "vaygo_pro",
+      "status": "active",
+      "grants_access": true,
+      "is_sandbox": false,
+      "valid_until": null,
+      "updated_at": "2026-11-11T12:00:00Z"
+    }
+  ]
 }
 ```
 
-**Campos do payload:**
+`status`: `active`, `past_due` (cobrança falhou, acesso mantido), `canceled` ou `refunded`. Use `grants_access`.
 
-<ParamField body="event" type="string" required>
-  Tipo do evento.
-</ParamField>
+### GET /internal/plans
 
-<ParamField body="customer.email" type="string" required>
-  Email do usuário que comprou.
-</ParamField>
-
-<ParamField body="customer.name" type="string" required>
-  Nome do usuário.
-</ParamField>
-
-<ParamField body="customer.phone" type="string">
-  Telefone do usuário, se disponível.
-</ParamField>
-
-<ParamField body="product.id" type="string" required>
-  UUID do produto.
-</ParamField>
-
-<ParamField body="product.plan_slug" type="string" required>
-  Slug do plano. Aceita `easy-standard`, `easy-pro`, `easy-enterprise`.
-</ParamField>
-
-<ParamField body="company" type="object">
-  Dados da empresa vinculada ao usuário, se aplicável (`name`, `cnpj`).
-</ParamField>
-
-<ParamField body="signature" type="string" required>
-  Assinatura HMAC SHA256 do payload (sem o campo `signature`) codificada em hex.
-</ParamField>
-
-## Como a assinatura funciona
-
-A assinatura é um HMAC SHA256 do corpo da requisição (sem o campo `signature`), gerado e verificado com um segredo compartilhado apenas entre os serviços internos da Easy Goal. A verificação usa comparação de tempo constante (`timingSafeEqual`) para prevenir timing attacks.
-
-## Respostas
+Links de checkout por plano, para a tela de assinatura do SaaS.
 
 ```json
-// 200 OK
-{ "received": true }
-
-// 400 Bad Request
-{ "error": "Payload invalido" }
-
-// 401 Unauthorized
-{ "error": "Assinatura ausente" }
-{ "error": "Assinatura invalida" }
+{
+  "plans": [
+    { "id": "uuid", "name": "Pro mensal", "checkout_url": "https://...", "entitlement_key": "vaygo_pro", "frequency": "monthly", "price": 49.9 }
+  ]
+}
 ```
+
+O preço é informativo: o valor cobrado é o do gateway.

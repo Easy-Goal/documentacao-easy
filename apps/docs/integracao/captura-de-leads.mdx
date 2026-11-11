@@ -1,0 +1,41 @@
+---
+title: "Captura de leads"
+description: "Páginas de captura que gravam direto no Easy CRM, com UTM, e o espelho dos leads no app."
+---
+
+## Enviar o lead
+
+Qualquer formulário pode enviar para a captura pública do Easy CRM. A Easy Goal fornece a URL do CRM, o id da conta e a chave de captura.
+
+```html
+<form action="URL_DO_EASY_CRM/api/leads/capture" method="POST">
+  <input type="hidden" name="empresa_id" value="ID_DA_CONTA" />
+  <input type="hidden" name="api_key" value="CHAVE_DE_CAPTURA" />
+  <input name="contato_nome" placeholder="Nome" required />
+  <input name="contato_email" type="email" placeholder="E-mail" />
+  <input name="contato_telefone" placeholder="WhatsApp" required />
+  <textarea name="observacoes" placeholder="O que você precisa?"></textarea>
+  <!-- Copie as UTMs da URL da página para estes campos -->
+  <input type="hidden" name="utm_source" />
+  <input type="hidden" name="utm_medium" />
+  <input type="hidden" name="utm_campaign" />
+  <button>Enviar</button>
+</form>
+```
+
+- Os nomes do próprio lead (`contato_nome`, `contato_email`, `contato_telefone`, `observacoes`, `campanha`) funcionam sem configuração.
+- `utm_campaign` cria ou reaproveita a campanha da conta.
+- Para chamar por `fetch`, envie JSON com os mesmos campos. Com `redirect_url` (num domínio liberado para a conta), o formulário volta para a sua página de obrigado.
+
+<Warning>
+Em páginas públicas, a chave de captura fica visível no HTML. Ela só permite criar lead nesta conta. Se precisar trocar, a Easy Goal gera outra.
+</Warning>
+
+## Ver os leads no app
+
+Com o espelho ligado pela equipe da Easy Goal:
+
+- **Builder:** na aba **Leads** do produto, os leads das suas capturas.
+- **Cliente com o CRM contratado:** no painel, os leads das campanhas que a Easy Goal opera para você.
+
+O espelho mostra contato, origem e etapa. Conversas, notas e histórico ficam no Easy CRM, no botão **Abrir no CRM**, para quem tem conta aprovada lá.

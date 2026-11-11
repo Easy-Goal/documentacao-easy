@@ -12,6 +12,7 @@ Inicia o fluxo de autenticação. Exibe o formulário de login e, após autentic
 | Parâmetro | Tipo | Obrigatório | Descrição |
 |-----------|------|-------------|-----------|
 | `redirect_to` | `string` | Sim | URL de callback para onde redirecionar após login. Deve estar previamente registrada junto ao time Easy Goal. |
+| `att` | `string` | Não | Origem da visita (UTM e click IDs) em JSON, gerada por `withAttribution` do `@easygoal/packages/core`. O SSO grava primeiro e último toque por usuário. Ver [Atribuição](/integracao/atribuicao). |
 
 **Respostas:**
 
