@@ -1,0 +1,49 @@
+---
+title: "Onboarding do SaaS"
+description: "Ligue o gateway, categorize as ofertas e valide o caminho do seu cliente de ponta a ponta."
+---
+
+O onboarding **não trava o seu SaaS**. Cada etapa fica verde quando a Easy Goal vê o dado real chegar. A única etapa feita por uma pessoa é a **aprovação final** da equipe Easy Goal.
+
+## 1. Links de checkout por oferta
+
+Na aba **Integração** do SaaS, cadastre um link para cada oferta que você vende no gateway. É **este link** que você divulga: o cliente compra direto no seu checkout.
+
+| Campo | Para quê |
+|---|---|
+| Link de checkout | Precisa ser de um domínio aceito pela Easy Goal |
+| Id do produto no gateway | Liga o evento de venda à oferta certa |
+| Tipo da oferta | **Assinatura recorrente**, **Venda avulsa**, **Order bump** ou **Upsell** |
+| Acesso que libera | A chave de acesso que o SaaS consulta (ex.: `vaygo_pro`) |
+
+O tipo da oferta define como a venda entra nas métricas: só a assinatura recorrente entra no MRR.
+
+## 2. Webhook do gateway
+
+Escolha o seu gateway na lista. Só aparecem os gateways **liberados**: com webhook validado pela Easy Goal e domínio de checkout aceito. O app mostra o passo a passo do gateway escolhido, a URL pronta para colar e os eventos para marcar.
+
+- A URL leva a **chave de API do produto**, mostrada uma única vez quando você cria a chave.
+- O **webhook secret** vai no campo de segredo (ou token) do gateway.
+- A Easy Goal só lê os eventos. Nenhuma chave do seu gateway fica com a gente.
+
+## 3. Validação de ponta a ponta
+
+Faça o caminho do seu cliente no **sandbox** do gateway. O checklist acompanha cada etapa:
+
+| Etapa | Fica verde quando |
+|---|---|
+| Webhook conferido | Chega um evento com a assinatura válida |
+| Ofertas categorizadas | Toda oferta vista nos eventos tem link com tipo |
+| Visita antes da compra | Alguém chega à página do SaaS antes de contratar |
+| Login pelo SSO | Um comprador entra no SaaS com a conta Easy Goal |
+| Venda aprovada | Uma venda de teste é aprovada |
+| Assinatura iniciada | Uma assinatura começa (só se houver oferta recorrente) |
+| Aprovação final | A equipe Easy Goal revisa e aprova |
+
+<Note>
+Eventos de sandbox validam o caminho, mas não entram nas somas de receita.
+</Note>
+
+## Catálogo
+
+O catálogo do marketplace é visto **só pela equipe Easy Goal**. A página do seu SaaS continua no ar, e a venda acontece pelo seu link de checkout.

@@ -576,4 +576,4 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 - O SaaS lê acesso e planos por `GET /internal/entitlements/{userId}` e `GET /internal/plans`.
 - Atribuição: parâmetro `att` no login do SSO (UTM e click IDs), gravado como primeiro e último toque.
 - Leads: captura pública do Easy CRM e espelho só leitura no app (aba Leads e painel do cliente).
-- Páginas: `/integracao/visao-geral`, `/integracao/gateways/abacatepay`, `/integracao/metricas`, `/integracao/captura-de-leads`, `/integracao/atribuicao`, `/api-reference/webhook`.
+- Páginas: `/integracao/visao-geral`, `/integracao/onboarding`, `/integracao/gateways/abacatepay`, `/integracao/metricas`, `/integracao/captura-de-leads`, `/integracao/atribuicao`, `/api-reference/webhook`.

@@ -82,6 +82,7 @@
             "group": "Visão Geral",
             "pages": [
               "integracao/visao-geral",
+              "integracao/onboarding",
               "integracao/metricas"
             ]
           },

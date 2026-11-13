@@ -30,6 +30,17 @@ Cada webhook vira **um** evento normalizado, com o mesmo formato para qualquer g
 
 Entram nas somas só os eventos **verificados** e **fora do sandbox**. Os demais aparecem como alertas de saúde do webhook.
 
+## Métricas do painel do produtor
+
+Todo valor em dinheiro trafega em **centavos inteiros** (campos `*_cents`). O app só formata; nenhum componente divide por 100 por conta própria.
+
+| Métrica | Fórmula |
+|---|---|
+| **MRR** | Soma do valor mensal das assinaturas ativas. Plano anual divide por 12, trimestral por 3. Venda avulsa não entra |
+| **Churn (30 dias)** | Assinaturas canceladas na janela ÷ assinaturas ativas no início da janela |
+| **LTV estimado** | Receita paga ÷ assinantes que pagaram ao menos uma vez |
+| **MRR por plano** | MRR agrupado pelo plano da assinatura. "Sem plano vinculado" indica oferta sem link categorizado |
+
 ## Acesso
 
 O acesso fica ligado ao **e-mail do comprador**, porque a compra pode acontecer antes do cadastro. Quando a pessoa entra no SSO com o mesmo e-mail, o acesso aparece para ela.
