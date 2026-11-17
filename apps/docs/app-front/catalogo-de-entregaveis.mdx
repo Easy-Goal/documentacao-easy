@@ -33,22 +33,70 @@ Erros: `400` validação, `409` nome/identificador duplicado, `404` não encontr
 
 Admin ▸ **Catálogo ▸ Entregáveis** (`/admin/deliverables`): categorias com objetivos e métrica; fichas abrem sob demanda; criar, editar, desativar. Lógica em `src/hooks/use-deliverables-catalog.ts`.
 
+## Diagnóstico (onda 2)
+
+Oito perguntas com opções, iguais no app (`/join/comprador`, `/objetivos/novo`), no Typebot e no CRM:
+
+| # | Pergunta | Campo |
+|---|---|---|
+| 1 | Qual resultado você quer? | `goal` |
+| 2 | O que você procura? (serviço, ferramenta, ferramenta + implementação, ainda não sei) | `need_type` |
+| 3 | Em quais áreas? (filtradas pela 1) | `categories[].slug` |
+| 4 | Onde você está hoje em cada área? | `categories[].stage` (`none`, `has_not_using`, `using_wants_scale`) |
+| 5 | Para quando? | `urgency` |
+| 6 | Quanto pretende investir? | `budget_range` |
+| 7 | Qual número quer mudar e quanto é hoje? | `kpi_baseline` (métrica da área, sentido e valor) |
+| 8 | Com suas palavras (opcional) | `description` |
+
+Gravado em `client_objectives` (colunas novas + `channel`). Lead do Typebot/CRM sem conta fica com `contact_*` e `user_id` nulo; ele só passa para uma conta quando o dono entra com o **e-mail do login confirmado** igual ao do lead (nunca pelo e-mail digitado no bot).
+
+## Proposta (onda 3)
+
+`objective_proposals` (versões; no máximo uma aberta por objetivo) e `objective_proposal_items` (cópia da ficha no momento da proposta). Sugestão: para cada área, as fichas das modalidades que servem à fase do cliente (`none` → setup/avulso/implementação; `has_not_using` → implementação/avulso; `using_wants_scale` → implementação/recorrência); "só ferramenta" tira a recorrência; "ainda não sei" começa pela consultoria. Fases em sequência, itens da fase em paralelo: **prazo total = soma do maior prazo de cada fase**.
+
+## Execução (onda 4)
+
+Aceite da proposta cria `contracted_deliverables` com datas em dias úteis (fase 1 começa no próximo dia útil). Status: `todo` → `in_progress` → `delivered` → `accepted` ou `returned`; `cancelled` só pelo admin; recorrência fica em andamento. Quem move: responsável (começa, entrega, retoma), comprador (aceita ou devolve com motivo), admin (tudo, inclusive trocar responsável). Cada mudança vai para `deliverable_status_history`; horas em `deliverable_time_logs`.
+
 ## Prazo médio vivo (onda 5)
 
-O prazo da ficha vale até haver **5 entregas reais** da categoria + modalidade; depois o sistema mostra a **mediana real**, recalculada por job diário em snapshots (histórico preservado).
+Job diário (`cron-deliverables`, 05:00) grava `category_lead_time_snapshots`: mediana de dias úteis do início à última entrega, taxa no prazo e aceite na 1ª, por categoria e modalidade. A proposta usa a mediana real quando há **5 entregas ou mais**; senão o prazo da ficha.
+
+## Resultado do cliente (onda 6)
+
+Quando todos os entregáveis não recorrentes do objetivo são aceitos, o job abre `client_result_measurements` em D+30/60/90 e avisa o comprador no dia. `improved` compara com a partida do diagnóstico no sentido da métrica.
 
 ## Assertividade
 
-Por entregável: **no prazo** × **aceite na 1ª entrega** × **KPI do cliente melhorou** (D+30/60/90). Agregada por categoria, responsável e trilha. O builder vê só o próprio desempenho; o admin vê todos; o comprador vê o próprio pedido.
+Por entregável: **no prazo** × **aceite na 1ª entrega** × **KPI do cliente melhorou**. Agregada por categoria e por responsável (`/admin/deliverables/performance`). O responsável vê só o próprio (`/entregas`); o comprador vê o próprio objetivo.
+
+## Rotas novas (ondas 2 a 6)
+
+| Método | Rota | Quem |
+|---|---|---|
+| `POST` | `/buyer/join-diagnostic` | Comprador no `/join` |
+| `POST` | `/client/objectives/diagnostic` · `GET /client/objectives/:id` | Comprador |
+| `POST` | `/client/proposals/:id/accept` · `/decline` | Comprador |
+| `POST` | `/client/contracted-deliverables/:id/accept` · `/return` | Comprador |
+| `POST` | `/client/objectives/:id/results` | Comprador |
+| `POST` | `/internal/diagnostics` | Typebot/CRM (`x-api-key`) |
+| `GET` | `/admin/objectives/:id` | Admin |
+| `POST` / `PUT` | `/admin/objectives/:id/proposals/suggest` · `/admin/objectives/:id/proposals` | Admin |
+| `POST` | `/admin/proposals/:id/send` | Admin |
+| `GET` / `PATCH` | `/admin/execution[/:id]` · `/admin/execution/assignees` · `/admin/execution/:id/history` | Admin |
+| `GET` / `POST` | `/admin/deliverables/performance` · `/admin/deliverables/stats/run` | Admin |
+| `GET` / `PATCH` / `POST` | `/user/assigned-deliverables[/:id][/time-logs]` · `/performance` | Responsável |
+
+Migrations (rodar em ordem no DEV): `20261118100000` (diagnóstico) → `110000` (propostas) → `120000` (execução) → `130000` (prazo médio) → `140000` (resultado).
 
 ## Ondas
 
 | Onda | Entrega | Status |
 |---|---|---|
-| 1 | Catálogo (categorias + fichas) | Codada, aguardando migration no DEV |
-| 2 | Diagnóstico com opções (app + Typebot, mesmo payload) | — |
-| 3 | Trilha sugerida e preview (ADR 075 sem pagamento) | — |
-| 4 | Execução com responsável, kanban e histórico; `services` migra para fichas | — |
-| 5 | Prazo médio vivo e painéis de assertividade | — |
-| 6 | Resultado do cliente (D+30/60/90) | — |
-| 7 | E2E, contratos na `main`, PRD e PRs em cadeia | — |
+| 1 | Catálogo (categorias + fichas) | Migration aplicada no DEV |
+| 2 | Diagnóstico com opções (app + Typebot, mesmo payload) | Codada; migration a aplicar |
+| 3 | Proposta por fases e preview | Codada; migration a aplicar |
+| 4 | Execução com responsável, histórico e horas | Codada; migration a aplicar |
+| 5 | Prazo médio vivo e painéis de assertividade | Codada; migration a aplicar |
+| 6 | Resultado do cliente (D+30/60/90) | Codada; migration a aplicar |
+| 7 | E2E, contratos na `main`, PRD, `services` → fichas, PRs em cadeia | Pendente |
