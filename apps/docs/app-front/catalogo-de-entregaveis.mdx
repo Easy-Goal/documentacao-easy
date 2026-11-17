@@ -1,0 +1,54 @@
+---
+title: "Catálogo de entregáveis"
+description: "Categorias, fichas padrão, diagnóstico, prazo médio vivo, responsável e assertividade por entregável (ADR 076)."
+---
+
+## O que é
+
+Cada pedido de cliente vira entregáveis com prazo, aceite e uma métrica de resultado. O catálogo define o padrão por **categoria** (lista fechada) e por **ficha** (entregável-padrão). As próximas ondas usam isso para diagnóstico, trilha, execução com responsável e medição da assertividade.
+
+## Modelo de dados (onda 1)
+
+| Tabela | Campos principais |
+|---|---|
+| `deliverable_categories` | `slug` (fixo), `name`, `goals[]` (`sell_more`, `operate_with_less_effort`, `launch_or_scale_product`, `strategy`), `result_metric_name`, `result_metric_unit`, `result_metric_direction` (`up`/`down`), `is_active`, `sort_order` |
+| `deliverable_templates` | `category_id`, `name`, `modality` (`one_off`, `setup`, `implementation`, `recurring`), `default_lead_time_days` (dias úteis) **ou** `recurrence_interval` (`monthly`/`quarterly`), `default_effort_hours`, `acceptance_criteria[]`, `required_tools` (`[{name, reason}]`), `base_price_cents`, `executor` (`easy_goal`, `builder`, `both`) |
+
+Regras: recorrência tem ciclo e não tem prazo; as outras modalidades têm prazo e não têm ciclo (check no banco + contrato). Nada é apagado: desativar com `is_active = false`. RLS: usuário logado lê só o ativo; escrita só pela API.
+
+Migration: `api-backend/supabase/migrations/20261117120000_adr076_catalogo_entregaveis.sql` (idempotente, com seed de 9 categorias e 11 fichas). Contrato: `@easygoal/packages/core` → `contracts/deliverables.ts`.
+
+## API
+
+| Método | Rota | Quem |
+|---|---|---|
+| `GET` | `/admin/deliverables` | Admin — categorias com todas as fichas |
+| `POST` / `PATCH` | `/admin/deliverables/categories[/:id]` | Admin — `slug` não muda no PATCH |
+| `POST` / `PATCH` | `/admin/deliverables/templates[/:id]` | Admin — o PATCH é juntado à ficha atual e validado inteiro |
+| `GET` | `/client/deliverable-catalog` | Qualquer usuário logado — só o ativo |
+
+Erros: `400` validação, `409` nome/identificador duplicado, `404` não encontrado.
+
+## App
+
+Admin ▸ **Catálogo ▸ Entregáveis** (`/admin/deliverables`): categorias com objetivos e métrica; fichas abrem sob demanda; criar, editar, desativar. Lógica em `src/hooks/use-deliverables-catalog.ts`.
+
+## Prazo médio vivo (onda 5)
+
+O prazo da ficha vale até haver **5 entregas reais** da categoria + modalidade; depois o sistema mostra a **mediana real**, recalculada por job diário em snapshots (histórico preservado).
+
+## Assertividade
+
+Por entregável: **no prazo** × **aceite na 1ª entrega** × **KPI do cliente melhorou** (D+30/60/90). Agregada por categoria, responsável e trilha. O builder vê só o próprio desempenho; o admin vê todos; o comprador vê o próprio pedido.
+
+## Ondas
+
+| Onda | Entrega | Status |
+|---|---|---|
+| 1 | Catálogo (categorias + fichas) | Codada, aguardando migration no DEV |
+| 2 | Diagnóstico com opções (app + Typebot, mesmo payload) | — |
+| 3 | Trilha sugerida e preview (ADR 075 sem pagamento) | — |
+| 4 | Execução com responsável, kanban e histórico; `services` migra para fichas | — |
+| 5 | Prazo médio vivo e painéis de assertividade | — |
+| 6 | Resultado do cliente (D+30/60/90) | — |
+| 7 | E2E, contratos na `main`, PRD e PRs em cadeia | — |
