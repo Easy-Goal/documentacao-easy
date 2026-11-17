@@ -18,7 +18,14 @@
         "groups": [
           {
             "group": "Visão Geral",
-            "pages": ["index", "introducao/arquitetura", "introducao/ecossistema", "introducao/easy-labs", "introducao/easy-labs-ui", "introducao/llm-context"]
+            "pages": [
+              "index",
+              "introducao/arquitetura",
+              "introducao/ecossistema",
+              "introducao/easy-labs",
+              "introducao/easy-labs-ui",
+              "introducao/llm-context"
+            ]
           }
         ]
       },
@@ -27,20 +34,20 @@
         "groups": [
           {
             "group": "Perfis & Acesso",
-            "pages": ["app-front/perfis"]
+            "pages": [
+              "app-front/perfis"
+            ]
           },
           {
             "group": "Área do Cliente",
-            "pages": ["app-front/usuario", "app-front/roadmap"]
+            "pages": [
+              "app-front/usuario"
+            ]
           },
           {
             "group": "Área do Builder",
             "pages": [
               "app-front/produtor",
-              "app-front/produtor/squad",
-              "app-front/produtor/cobranca",
-              "app-front/produtor/saques",
-              "app-front/produtor/checkout",
               "app-front/produtor/relatorios",
               "app-front/produtor/analytics"
             ]
@@ -73,13 +80,23 @@
         "groups": [
           {
             "group": "Visão Geral",
-            "pages": ["integracao/visao-geral"]
+            "pages": [
+              "integracao/visao-geral",
+              "integracao/onboarding",
+              "integracao/metricas"
+            ]
           },
           {
-            "group": "Modos de Integração",
+            "group": "Gateways",
             "pages": [
-              "integracao/modo-integrado",
-              "integracao/modo-externo"
+              "integracao/gateways/abacatepay"
+            ]
+          },
+          {
+            "group": "Leads e atribuição",
+            "pages": [
+              "integracao/captura-de-leads",
+              "integracao/atribuicao"
             ]
           }
         ]
@@ -131,7 +148,13 @@
     }
   },
   "contextual": {
-    "options": ["copy", "view", "claude", "cursor", "vscode"]
+    "options": [
+      "copy",
+      "view",
+      "claude",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {

@@ -1,66 +1,40 @@
 ---
-title: "Visão Geral — Integrações Externas"
-description: "Dois modos de integração e dois gateways disponíveis para produtos no ecossistema Easy Goal."
+title: "Visão geral"
+description: "O gateway é seu. A Easy Goal lê os eventos e entrega login, atribuição, leads e métricas para qualquer SaaS."
 ---
 
-## Modos de integração
+## Como funciona
 
-Ao registrar seu produto na Easy Goal, você escolhe **como** gerenciar autenticação e pagamento.
+O dinheiro entra **na conta do builder**, no gateway que ele escolher. A Easy Goal não recebe, não guarda e não repassa valores das suas vendas, e não guarda a chave secreta do seu gateway.
 
-<CardGroup cols={2}>
-  <Card title="Integrado" icon="plug" href="/integracao/modo-integrado">
-    SSO + checkout 100% via Easy Goal. Menor fricção para o produtor — a EG cuida de tudo.
-  </Card>
-  <Card title="Externo" icon="arrow-right-arrow-left" href="/integracao/modo-externo">
-    Você mantém seu próprio checkout (Kiwify, AbacatePay etc.). SSO da EG é **opcional**.
-    Somente clientes com pagamento confirmado nos dois lados têm acesso.
-  </Card>
-</CardGroup>
+O que a Easy Goal entrega, igual para todo SaaS do ecossistema:
 
----
-
-## Gateways disponíveis
-
-A Easy Goal integra **três** gateways de pagamento:
-
-| Gateway | Modo Integrado | Modo Externo |
+| Camada | Quem entrega | Onde ler |
 |---|---|---|
-| **AbacatePay** | EG gerencia checkout e cobrança recorrente | Produtor usa AbacatePay próprio; EG recebe webhook |
-| **Mercado Pago** | EG gerencia checkout e cobrança recorrente | Não documentado como opção externa hoje |
-| **Kiwify** | EG gerencia o produto no painel Kiwify | Produtor tem produto no Kiwify; EG recebe webhook |
-
-No modo integrado, o gateway efetivo pode variar **por método de pagamento** (PIX, boleto, cartão) através de uma matriz configurável no produto — não é mais uma escolha única por produto.
-
-> **Vantagem de usar múltiplos gateways:** se um gateway apresentar instabilidade, é possível migrar novos produtos (ou apenas um método de pagamento) para outro sem alterar a integração SSO ou a lógica do seu app.
-
----
-
-## Matriz de decisão
+| Login | SSO da Easy Goal | [SSO](/sso/visao-geral) |
+| Origem das visitas (UTM e click IDs) | Parâmetro `att` no login | [Atribuição](/integracao/atribuicao) |
+| Vendas e assinaturas | Webhook do seu gateway | [AbacatePay](/integracao/gateways/abacatepay) |
+| Acesso ao SaaS | Calculado a partir dos eventos | [Métricas e acesso](/integracao/metricas) |
+| Leads | Easy CRM | [Captura de leads](/integracao/captura-de-leads) |
 
 ```
-Quero usar o checkout da Easy Goal?
-├─ Sim → Modo INTEGRADO
-│        └─ Escolha o gateway por método de pagamento: AbacatePay, Mercado Pago ou Kiwify (EG gerencia)
-└─ Não → Modo EXTERNO
-         ├─ Tenho produto Kiwify     → webhook Kiwify     → EG valida
-         ├─ Tenho produto AbacatePay → webhook AbacatePay → EG valida
-         └─ SSO opcional: usuários precisam ter conta EG + pagamento confirmado
+Visitante ─UTM─► LP ou captura ─► Easy CRM (lead) ─────────────┐
+      │                                                         │ espelho só leitura no app
+      └─► SaaS ─► SSO (cadastro + att) ─► Easy Goal ────────────┤
+                                                                │
+             link do plano ─► gateway do builder ─webhook─► eventos de venda ─► acesso e métricas
 ```
 
----
+## O que fica no gateway
 
-## Como o SSO externo funciona
+Saque, reembolso, cancelamento e cobrança acontecem **na sua conta**, no painel do gateway. O app da Easy Goal mostra as vendas que o webhook informou e leva você ao gateway quando for preciso agir.
 
-No modo externo com SSO opcional, a validação segue esta ordem:
+## Gateways
 
-1. Usuário clica **"Entrar com Easy Goal"** no seu app
-2. SSO autentica e retorna `eg_session` (JWT com `sub` + `email`)
-3. Seu callback chama `GET /api/saas/check-access` com `api_key` + `user_id` + `email`
-4. Easy Goal verifica a assinatura vinculada à sua `api_key`:
-   - Primeiro login: busca pelo `email` do comprador (identificado a partir do webhook Kiwify/AbacatePay)
-   - Logins seguintes: busca por `user_id` (vinculado automaticamente no primeiro login)
-5. `active: true` → acesso liberado; `active: false` → redirecionar para checkout
+Os gateways liberados aparecem no app, na aba **Integração** do SaaS. Só entra na lista o gateway com webhook validado pela Easy Goal e domínio de checkout aceito. Hoje: **AbacatePay** e **Kiwify**.
+
+Passo a passo completo em [Onboarding do SaaS](/integracao/onboarding).
 
 <Note>
-  O webhook de pagamento (Kiwify ou AbacatePay) deve ser configurado para notificar a Easy Goal **além** do seu próprio endpoint. O endereço do canal é `POST /api/webhooks/kiwify/<api_key>` — gerado quando você cria o API App.
+Coprodução e afiliados usam o recurso nativo do seu gateway. A plataforma não divide valores.
 </Note>

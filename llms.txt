@@ -76,16 +76,15 @@ redirect(
 
 ---
 
-## Arquitetura de Pagamento → SSO
+## Arquitetura de Pagamento
 
 ```
-[Usuário] → [app-front] → paga via AbacatePay
-                ↓ webhook AbacatePay confirma
-        app-front ──POST HMAC SHA256──▶ SSO /api/webhook/payment
-                                               ↓
-                                  SSO cria usuário / gera link de cadastro
-                                  (envia email via Resend — em implementação)
+Cliente paga cada ferramenta direto ao vendedor (gateway do produtor)
+                ↓ webhook do gateway
+        api-backend registra o evento → acesso e faturas
 ```
+
+O gateway dos serviços da própria Easy Goal ainda não foi definido. A confirmação é manual no admin.
 
 ---
 
@@ -192,9 +191,6 @@ NEXT_PUBLIC_TYPEBOT_STEP_VISUAL_IDENTITY=
 NEXT_PUBLIC_TYPEBOT_STEP_COMPLIANCE=
 NEXT_PUBLIC_TYPEBOT_STEP_TESTING=
 
-# AbacatePay
-ABACATEPAY_API_KEY=
-ABACATEPAY_WEBHOOK_SECRET=
 
 # Webhook para o SSO (DEVE ser idêntico ao WEBHOOK_SECRET do SSO)
 SSO_WEBHOOK_URL=http://localhost:3000/api/webhook/payment
@@ -570,3 +566,14 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 | OAuth callback falha | Redirect URL não cadastrada | Registrar em Supabase → Auth → Redirect URLs |
 | `mint dev` erro "no docs.json" | Diretório errado | Executar dentro de `apps/docs/` |
 | app-front na porta errada | Confusão SSO/app-front | SSO=3000, app-front=3001 |
+
+---
+
+## Gateway do builder, eventos e acesso (plano s360)
+
+- O gateway é do builder (ADR 069). A Easy Goal só lê o webhook em `POST /webhooks/{gateway}/{api_key}` (AbacatePay hoje; Kiwify na rota própria).
+- Cada evento vira um `commerce_event` normalizado (`sale.approved`, `subscription.renewed`, `sale.refunded`...). O acesso (`entitlements`) é derivado dos eventos verificados.
+- O SaaS lê acesso e planos por `GET /internal/entitlements/{userId}` e `GET /internal/plans`.
+- Atribuição: parâmetro `att` no login do SSO (UTM e click IDs), gravado como primeiro e último toque.
+- Leads: captura pública do Easy CRM e espelho só leitura no app (aba Leads e painel do cliente).
+- Páginas: `/integracao/visao-geral`, `/integracao/onboarding`, `/integracao/gateways/abacatepay`, `/integracao/metricas`, `/integracao/captura-de-leads`, `/integracao/atribuicao`, `/api-reference/webhook`.

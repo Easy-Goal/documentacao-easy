@@ -1,0 +1,57 @@
+---
+title: "AbacatePay"
+description: "Ligar o webhook da sua conta AbacatePay à Easy Goal: links por plano, segredo e teste no sandbox."
+---
+
+## 1. Chave de API e segredo do webhook
+
+No app da Easy Goal, em **Chaves de API**, crie uma chave para o produto. Ela aparece **uma vez**, junto com o **webhook secret**. Guarde os dois.
+
+## 2. Links por plano
+
+No produto, aba **Integração**, em **Links de checkout por plano**, cadastre um link para cada plano:
+
+| Campo | Exemplo | Para que serve |
+|---|---|---|
+| Nome | Pro mensal | Nome exibido ao cliente |
+| Link de checkout | `https://...abacatepay.com/...` | Para onde o cliente vai pagar. Só domínios aceitos pela curadoria |
+| Acesso que libera | `vaygo_pro` | O que o SaaS libera quando a venda é confirmada |
+| Id do produto no gateway | `prod_abc123` | Diz qual plano o webhook está pagando |
+
+Sem link ativo, o produto não vai para a curadoria.
+
+## 3. Webhook na AbacatePay
+
+No painel da AbacatePay, crie um webhook com:
+
+- **URL:** `https://api.easygoal.com.br/webhooks/abacatepay/SUA_API_KEY`
+- **Secret:** o webhook secret do passo 1
+- **Eventos:** `checkout.*`, `transparent.*` e `subscription.*`
+
+A Easy Goal confere duas coisas em cada evento, como a [documentação da AbacatePay](https://docs.abacatepay.com/pages/webhooks/security) recomenda:
+
+1. O segredo, no header `X-Webhook-Secret` (ou em `?webhookSecret=`). Errado: responde `401` e nada é gravado.
+2. A assinatura `X-Webhook-Signature`, um HMAC-SHA256 do corpo bruto. Corpo alterado: `401`.
+
+Evento sem assinatura é gravado como **não verificado** e **não libera acesso**. Ele aparece na aba **Vendas** como alerta.
+
+## 4. Teste no sandbox
+
+1. Na AbacatePay, use o modo de teste (eventos com `devMode: true`).
+2. Pague um plano com o cartão de teste, usando o **mesmo e-mail** da sua conta na Easy Goal.
+3. Na aba **Vendas** do produto, confira o último evento recebido. Eventos de sandbox ficam fora das somas.
+4. Estorne no painel da AbacatePay e confira que o acesso foi revogado.
+
+## Como cada evento é lido
+
+| Evento da AbacatePay | Evento na Easy Goal | Efeito no acesso |
+|---|---|---|
+| `checkout.completed`, `transparent.completed` | `sale.approved` | Libera |
+| `subscription.completed`, `subscription.trial_started` | `subscription.started` | Libera |
+| `subscription.renewed`, `subscription.plan_changed` | `subscription.renewed` | Mantém |
+| `subscription.payment_failed` | `subscription.past_due` | Mantém até o cancelamento |
+| `subscription.cancelled` | `subscription.canceled` | Encerra |
+| `*.refunded` | `sale.refunded` | Encerra |
+| `*.disputed`, `*.lost` | `sale.chargeback` | Encerra |
+
+Saques, transferências e Pix recebido fora de checkout são ignorados.
