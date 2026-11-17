@@ -4,6 +4,10 @@ description: "Exemplo de referência de como o Club LP autentica via SSO EasyGoa
 ---
 
 <Note>
+Desde a s367 a LP do Easy Club não mostra mais login: a entrada é pela aplicação (veja a [visão geral](/club-lp/visao-geral)). As rotas de sessão abaixo continuam no repositório e servem de **referência** para qualquer produto que autentique pelo SSO.
+</Note>
+
+<Note>
 O Club LP não implementa OAuth manualmente — todo o fluxo (login, callback, sessão) é encapsulado pelo pacote `@easygoal/packages/auth`. O código abaixo é um exemplo de referência do padrão usado — adapte os caminhos de arquivo à estrutura do seu próprio projeto.
 </Note>
 
