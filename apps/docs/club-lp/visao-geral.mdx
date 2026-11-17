@@ -1,6 +1,6 @@
 ---
 title: "Easy Club LP — Visão geral"
-description: "Porta de entrada da comunidade fechada: aplicação no Typebot, checkout com valor simbólico e convite manual no WhatsApp (adendo s366 do ADR 074)."
+description: "Porta de entrada da comunidade fechada: aplicação própria (filtro em 1 minuto), checkout de R$ 47 e convite manual no WhatsApp (adendo s366 do ADR 074)."
 ---
 
 ## O que é
@@ -10,16 +10,18 @@ A LP do **Easy Club** (`lp-easy-club`, porta local 3300) é a porta de entrada d
 ## Fluxo
 
 ```
-LP  →  Aplicação (Typebot, 7 perguntas)  →  aprovado: checkout (valor simbólico)  →  convite manual no WhatsApp
-                                         →  "ainda não": mensagem + conteúdo para seguir
-Typebot  →  POST /api/leads/capture do Easy CRM (origem easy-club, etiqueta aprovado/nao-agora)
+LP  →  Aplicação própria (#aplicar, 6 perguntas numa tela)  →  aprovado: checkout (R$ 47)  →  convite manual no WhatsApp
+                                                             →  "ainda não": mensagem para aplicar depois
+POST /api/aplicacao (servidor da LP)  →  POST /api/leads/capture do Easy CRM
 ```
 
-A regra de aprovação e as mensagens estão no roteiro do Typebot (`easy-labs/context/lp-easy-club/copy-v2-aplicacao-perpetuo-2026-11-17.md`). O CRM não depende do bot: a captura é um bloco HTTP.
+O Typebot saiu na s367: a aplicação é um formulário da própria LP, aberto e de 1 minuto, com o aviso de que é um filtro. Regra (aprovada pelo fundador): **aprovado = Sim em "mostrar o produto em público toda semana" e Sim em "participar das lives"**, em qualquer fase. A regra fica em `src/lib/aplicacao.ts` e é calculada no servidor; o link do checkout só volta para o aprovado.
+
+No CRM o lead entra com `produto_interesse = Easy Club`, e a primeira linha das observações traz `Etiquetas: easy-club, aprovado|nao-agora, fase-*`. As UTMs são lidas da URL da LP.
 
 ## Seções da página
 
-Hero (quem constrói em público, provas) → O que a gente abre (setup + equity com cases; acertos e erros em estratégia, posicionamento, features, testes e MVP) → O desafio (fase do SaaS, networking com resultado, aparecer, lives) → Para quem é → Aplicação (`#aplicar`, Typebot embutido) → FAQ.
+Hero (quem constrói em público, provas) → O que a gente abre (setup + equity com cases; acertos e erros em estratégia, posicionamento, features, testes e MVP) → O desafio (fase do SaaS, networking com resultado, aparecer, lives) → Para quem é → Aplicação (`#aplicar`, formulário próprio) → FAQ.
 
 Todo o texto fica em **`src/content/lp.ts`**; os componentes em `src/components/lp/` só renderizam. Para mudar texto, edite só esse arquivo. 
 
@@ -29,19 +31,23 @@ Todo o texto fica em **`src/content/lp.ts`**; os componentes em `src/components/
 NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br        # header compartilhado
 NEXT_PUBLIC_EASY_API_KEY=eg_live_...                    # header compartilhado
 NEXT_PUBLIC_EASYGOAL_APP_URL=https://app.easygoal.com.br
-NEXT_PUBLIC_TYPEBOT_URL=https://typebot.co/...          # opcional; sem ele a seção mostra um aviso
-NEXT_PUBLIC_CLUB_PRECO="R$ 47"                          # opcional; sem ele o FAQ diz "valor simbólico"
+NEXT_PUBLIC_CLUB_PRECO="R$ 47"                          # opcional; padrão R$ 47 em src/content/lp.ts
+
+# Só servidor (nunca NEXT_PUBLIC_)
+EASY_CRM_URL=https://crm.easygoal.com.br                # obrigatória; sem as três a aplicação responde "fora do ar"
+EASY_CRM_CAPTURE_EMPRESA_ID=...
+EASY_CRM_CAPTURE_API_KEY=...
+CLUB_CHECKOUT_URL=https://...                           # opcional; sem ele o aprovado é chamado no WhatsApp com o link
 ```
 
 Variáveis `NEXT_PUBLIC_*` entram no build: na Vercel, mudar exige novo deploy.
 
 ## Segurança (CSP)
 
-`next.config.ts` libera no `frame-src` `typebot.co`, `*.typebot.io` e a origem de `NEXT_PUBLIC_TYPEBOT_URL` (Typebot próprio), e libera Google Analytics/GTM em `script-src`, `img-src` e `connect-src`. Typebot em outro domínio exige o link na variável **antes** do build.
+`next.config.ts` não libera iframe de terceiro (só o GTM no `frame-src`) e libera Google Analytics/GTM em `script-src`, `img-src` e `connect-src`. A chave do CRM e o link do checkout ficam no servidor; o formulário tem campo escondido contra robô.
 
 ## Checklist
 
-<Check>Typebot publicado com o roteiro e o bloco HTTP para a captura do CRM</Check>
-<Check>`NEXT_PUBLIC_TYPEBOT_URL` e `NEXT_PUBLIC_CLUB_PRECO` na Vercel + redeploy</Check>
+<Check>`EASY_CRM_*` e `CLUB_CHECKOUT_URL` na Vercel + redeploy</Check>
 <Check>Aplicação aprovada mostra o checkout; "ainda não" mostra a mensagem</Check>
 <Check>Lead aparece no CRM com origem `easy-club`</Check>

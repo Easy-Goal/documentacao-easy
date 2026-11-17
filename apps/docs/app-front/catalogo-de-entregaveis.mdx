@@ -35,7 +35,7 @@ Admin ▸ **Catálogo ▸ Entregáveis** (`/admin/deliverables`): categorias com
 
 ## Diagnóstico (onda 2)
 
-Oito perguntas com opções, iguais no app (`/join/comprador`, `/objetivos/novo`), no Typebot e no CRM:
+Oito perguntas com opções, iguais no app (`/join/comprador`, `/objetivos/novo`), no site (`#contato` do `site-easygoal`) e no CRM:
 
 | # | Pergunta | Campo |
 |---|---|---|
@@ -48,7 +48,7 @@ Oito perguntas com opções, iguais no app (`/join/comprador`, `/objetivos/novo`
 | 7 | Qual número quer mudar e quanto é hoje? | `kpi_baseline` (métrica da área, sentido e valor) |
 | 8 | Com suas palavras (opcional) | `description` |
 
-Gravado em `client_objectives` (colunas novas + `channel`). Lead do Typebot/CRM sem conta fica com `contact_*` e `user_id` nulo; ele só passa para uma conta quando o dono entra com o **e-mail do login confirmado** igual ao do lead (nunca pelo e-mail digitado no bot).
+Gravado em `client_objectives` (colunas novas + `channel`). Lead do site/CRM sem conta fica com `contact_*` e `user_id` nulo; ele só passa para uma conta quando o dono entra com o **e-mail do login confirmado** igual ao do lead (nunca pelo e-mail digitado no bot).
 
 ## Proposta (onda 3)
 
@@ -79,7 +79,8 @@ Por entregável: **no prazo** × **aceite na 1ª entrega** × **KPI do cliente m
 | `POST` | `/client/proposals/:id/accept` · `/decline` | Comprador |
 | `POST` | `/client/contracted-deliverables/:id/accept` · `/return` | Comprador |
 | `POST` | `/client/objectives/:id/results` | Comprador |
-| `POST` | `/internal/diagnostics` | Typebot/CRM (`x-api-key`) |
+| `POST` | `/internal/diagnostics` | Servidor do site / CRM (`x-api-key`), canal `site` ou `crm` |
+| `GET` | `/internal/deliverable-catalog` | Servidor do site (`x-api-key`): só áreas ativas, sem preço |
 | `GET` | `/admin/objectives/:id` | Admin |
 | `POST` / `PUT` | `/admin/objectives/:id/proposals/suggest` · `/admin/objectives/:id/proposals` | Admin |
 | `POST` | `/admin/proposals/:id/send` | Admin |
@@ -87,14 +88,14 @@ Por entregável: **no prazo** × **aceite na 1ª entrega** × **KPI do cliente m
 | `GET` / `POST` | `/admin/deliverables/performance` · `/admin/deliverables/stats/run` | Admin |
 | `GET` / `PATCH` / `POST` | `/user/assigned-deliverables[/:id][/time-logs]` · `/performance` | Responsável |
 
-Migrations (rodar em ordem no DEV): `20261118100000` (diagnóstico) → `110000` (propostas) → `120000` (execução) → `130000` (prazo médio) → `140000` (resultado).
+Migrations (rodar em ordem no DEV): `20261118100000` (diagnóstico) → `110000` (propostas) → `120000` (execução) → `130000` (prazo médio) → `140000` (resultado) → `150000` (canal `site`).
 
 ## Ondas
 
 | Onda | Entrega | Status |
 |---|---|---|
 | 1 | Catálogo (categorias + fichas) | Migration aplicada no DEV |
-| 2 | Diagnóstico com opções (app + Typebot, mesmo payload) | Codada; migration a aplicar |
+| 2 | Diagnóstico com opções (app + site, mesmo payload; Typebot saiu na s367) | Codada; migration a aplicar |
 | 3 | Proposta por fases e preview | Codada; migration a aplicar |
 | 4 | Execução com responsável, histórico e horas | Codada; migration a aplicar |
 | 5 | Prazo médio vivo e painéis de assertividade | Codada; migration a aplicar |
