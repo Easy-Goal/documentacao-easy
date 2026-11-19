@@ -1,50 +1,53 @@
 ---
-title: "Club LP — Visão Geral"
-description: "Landing page mínima que autentica via SSO EasyGoal, exibe perfil do usuário e redireciona para o app principal."
+title: "Easy Club LP — Visão geral"
+description: "Porta de entrada da comunidade fechada: aplicação própria (filtro em 1 minuto), checkout de R$ 47 e convite manual no WhatsApp (adendo s366 do ADR 074)."
 ---
 
-## O que é o Club LP?
+## O que é
 
-O **Club LP** é uma landing page de exemplo. Ela serve como referência de implementação para qualquer produto que precise:
+A LP do **Easy Club** (`lp-easy-club`, porta local 3300) é a porta de entrada da comunidade fechada de quem constrói produto com recorrência: devs, fundadores de SaaS e especialistas que querem um produto em co-produção. A versão antiga (Discord, marketplace, afiliados) saiu na s367.
 
-1. Autenticar usuários via SSO EasyGoal usando `@easygoal/packages/auth`
-2. Exibir um banner com dados do usuário logado (nome, se é produtor)
-3. Linkar de volta para o app principal (dashboard ou painel do produtor)
-
-> **Stack:** Next.js 14+ (App Router) — mesmo padrão do app-front. Não tem página de perfil dedicada: os dados do usuário aparecem em um banner na própria landing page.
-
-## Arquitetura do Fluxo
+## Fluxo
 
 ```
-[Club LP]  →  [SSO]  →  [Club LP callback]  →  [Banner na landing page]
-   (1)          (2)              (3)                     (4)
-
-1. Botão "Entrar" (via useSSOLogin) redireciona para SSO com redirect_to
-2. SSO autentica (login com conta EasyGoal) e redireciona de volta
-3. Callback recebe ?eg_session=<token>, salva em cookie httpOnly (7 dias)
-4. EgSessionProvider lê a sessão via /api/auth/session e alimenta useEgSession()
+LP  →  Aplicação própria (#aplicar, 6 perguntas numa tela)  →  aprovado: checkout (R$ 47)  →  convite manual no WhatsApp
+                                                             →  "ainda não": mensagem para aplicar depois
+POST /api/aplicacao (servidor da LP)  →  POST /api/leads/capture do Easy CRM
 ```
 
-Não há `access_token`/`refresh_token`/`state` nesse fluxo — o parâmetro é um único `eg_session` (mesmo padrão descrito em [Fluxo OAuth](/sso/fluxo-oauth)).
+O Typebot saiu na s367: a aplicação é um formulário da própria LP, aberto e de 1 minuto, com o aviso de que é um filtro. Regra (aprovada pelo fundador): **aprovado = Sim em "mostrar o produto em público toda semana" e Sim em "participar das lives"**, em qualquer fase. A regra fica em `src/lib/aplicacao.ts` e é calculada no servidor; o link do checkout só volta para o aprovado.
 
-## Estrutura da implementação
+No CRM o lead entra com `produto_interesse = Easy Club`, e a primeira linha das observações traz `Etiquetas: easy-club, aprovado|nao-agora, fase-*`. As UTMs são lidas da URL da LP.
 
-Login e logout são disparados **client-side** pelos hooks do package (`useSSOLogin`, `handleSignout`) — não existem rotas `/auth/login` nem `/auth/logout` no próprio Club LP. A landing page usa um provider de sessão, uma rota de callback, um endpoint que decodifica os claims e componentes de UI (banner e botão de login) que consomem esses hooks. Veja o passo a passo completo em [Implementação](/club-lp/implementacao).
+## Seções da página
 
-## Variáveis de Ambiente
+Hero (quem constrói em público, provas) → O que a gente abre (setup + equity com cases; acertos e erros em estratégia, posicionamento, features, testes e MVP) → O desafio (fase do SaaS, networking com resultado, aparecer, lives) → Para quem é → Aplicação (`#aplicar`, formulário próprio) → FAQ.
+
+Todo o texto fica em **`src/content/lp.ts`**; os componentes em `src/components/lp/` só renderizam. Para mudar texto, edite só esse arquivo. 
+
+## Variáveis de ambiente
 
 ```env
-# .env.local do projeto Club
-NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br
+NEXT_PUBLIC_SSO_URL=https://sso.easygoal.com.br        # header compartilhado
+NEXT_PUBLIC_EASY_API_KEY=eg_live_...                    # header compartilhado
 NEXT_PUBLIC_EASYGOAL_APP_URL=https://app.easygoal.com.br
+NEXT_PUBLIC_CLUB_PRECO="R$ 47"                          # opcional; padrão R$ 47 em src/content/lp.ts
 
-# API key do produto registrado no SSO (permite silent auth cross-domain)
-NEXT_PUBLIC_EASY_API_KEY=eg_sandbox_sua_chave_aqui
+# Só servidor (nunca NEXT_PUBLIC_)
+EASY_CRM_URL=https://crm.easygoal.com.br                # obrigatória; sem as três a aplicação responde "fora do ar"
+EASY_CRM_CAPTURE_EMPRESA_ID=...
+EASY_CRM_CAPTURE_API_KEY=...
+CLUB_CHECKOUT_URL=https://...                           # opcional; sem ele o aprovado é chamado no WhatsApp com o link
 ```
 
-## Checklist do Club LP
+Variáveis `NEXT_PUBLIC_*` entram no build: na Vercel, mudar exige novo deploy.
 
-<Check>Registrar o callback (`https://club.easygoal.com.br/auth/callback`) nas redirect URLs do produto no SSO</Check>
-<Check>Configurar `.env.local` com `NEXT_PUBLIC_SSO_URL`, `NEXT_PUBLIC_EASYGOAL_APP_URL` e `NEXT_PUBLIC_EASY_API_KEY`</Check>
-<Check>Testar fluxo completo: **Entrar** → SSO → `/auth/callback` → banner aparece na landing page</Check>
-<Check>Em produção: HTTPS obrigatório (cookies `secure: true`)</Check>
+## Segurança (CSP)
+
+`next.config.ts` não libera iframe de terceiro (só o GTM no `frame-src`) e libera Google Analytics/GTM em `script-src`, `img-src` e `connect-src`. A chave do CRM e o link do checkout ficam no servidor; o formulário tem campo escondido contra robô.
+
+## Checklist
+
+<Check>`EASY_CRM_*` e `CLUB_CHECKOUT_URL` na Vercel + redeploy</Check>
+<Check>Aplicação aprovada mostra o checkout; "ainda não" mostra a mensagem</Check>
+<Check>Lead aparece no CRM com origem `easy-club`</Check>

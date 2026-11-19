@@ -1,0 +1,103 @@
+---
+title: "Catálogo de entregáveis"
+description: "Categorias, fichas padrão, diagnóstico, prazo médio vivo, responsável e assertividade por entregável (ADR 076)."
+---
+
+## O que é
+
+Cada pedido de cliente vira entregáveis com prazo, aceite e uma métrica de resultado. O catálogo define o padrão por **categoria** (lista fechada) e por **ficha** (entregável-padrão). As próximas ondas usam isso para diagnóstico, trilha, execução com responsável e medição da assertividade.
+
+## Modelo de dados (onda 1)
+
+| Tabela | Campos principais |
+|---|---|
+| `deliverable_categories` | `slug` (fixo), `name`, `goals[]` (`sell_more`, `operate_with_less_effort`, `launch_or_scale_product`, `strategy`), `result_metric_name`, `result_metric_unit`, `result_metric_direction` (`up`/`down`), `is_active`, `sort_order` |
+| `deliverable_templates` | `category_id`, `name`, `modality` (`one_off`, `setup`, `implementation`, `recurring`), `default_lead_time_days` (dias úteis) **ou** `recurrence_interval` (`monthly`/`quarterly`), `default_effort_hours`, `acceptance_criteria[]`, `required_tools` (`[{name, reason}]`), `base_price_cents`, `executor` (`easy_goal`, `builder`, `both`) |
+
+Regras: recorrência tem ciclo e não tem prazo; as outras modalidades têm prazo e não têm ciclo (check no banco + contrato). Nada é apagado: desativar com `is_active = false`. RLS: usuário logado lê só o ativo; escrita só pela API.
+
+Migration: `api-backend/supabase/migrations/20261117120000_adr076_catalogo_entregaveis.sql` (idempotente, com seed de 9 categorias e 11 fichas). Contrato: `@easygoal/packages/core` → `contracts/deliverables.ts`.
+
+## API
+
+| Método | Rota | Quem |
+|---|---|---|
+| `GET` | `/admin/deliverables` | Admin — categorias com todas as fichas |
+| `POST` / `PATCH` | `/admin/deliverables/categories[/:id]` | Admin — `slug` não muda no PATCH |
+| `POST` / `PATCH` | `/admin/deliverables/templates[/:id]` | Admin — o PATCH é juntado à ficha atual e validado inteiro |
+| `GET` | `/client/deliverable-catalog` | Qualquer usuário logado — só o ativo |
+
+Erros: `400` validação, `409` nome/identificador duplicado, `404` não encontrado.
+
+## App
+
+Admin ▸ **Catálogo ▸ Entregáveis** (`/admin/deliverables`): categorias com objetivos e métrica; fichas abrem sob demanda; criar, editar, desativar. Lógica em `src/hooks/use-deliverables-catalog.ts`.
+
+## Diagnóstico (onda 2)
+
+Oito perguntas com opções, iguais no app (`/join/comprador`, `/objetivos/novo`), no site (`#contato` do `site-easygoal`) e no CRM:
+
+| # | Pergunta | Campo |
+|---|---|---|
+| 1 | Qual resultado você quer? | `goal` |
+| 2 | O que você procura? (serviço, ferramenta, ferramenta + implementação, ainda não sei) | `need_type` |
+| 3 | Em quais áreas? (filtradas pela 1) | `categories[].slug` |
+| 4 | Onde você está hoje em cada área? | `categories[].stage` (`none`, `has_not_using`, `using_wants_scale`) |
+| 5 | Para quando? | `urgency` |
+| 6 | Quanto pretende investir? | `budget_range` |
+| 7 | Qual número quer mudar e quanto é hoje? | `kpi_baseline` (métrica da área, sentido e valor) |
+| 8 | Com suas palavras (opcional) | `description` |
+
+Gravado em `client_objectives` (colunas novas + `channel`). Lead do site/CRM sem conta fica com `contact_*` e `user_id` nulo; ele só passa para uma conta quando o dono entra com o **e-mail do login confirmado** igual ao do lead (nunca pelo e-mail digitado no bot).
+
+## Proposta (onda 3)
+
+`objective_proposals` (versões; no máximo uma aberta por objetivo) e `objective_proposal_items` (cópia da ficha no momento da proposta). Sugestão: para cada área, as fichas das modalidades que servem à fase do cliente (`none` → setup/avulso/implementação; `has_not_using` → implementação/avulso; `using_wants_scale` → implementação/recorrência); "só ferramenta" tira a recorrência; "ainda não sei" começa pela consultoria. Fases em sequência, itens da fase em paralelo: **prazo total = soma do maior prazo de cada fase**.
+
+## Execução (onda 4)
+
+Aceite da proposta cria `contracted_deliverables` com datas em dias úteis (fase 1 começa no próximo dia útil). Status: `todo` → `in_progress` → `delivered` → `accepted` ou `returned`; `cancelled` só pelo admin; recorrência fica em andamento. Quem move: responsável (começa, entrega, retoma), comprador (aceita ou devolve com motivo), admin (tudo, inclusive trocar responsável). Cada mudança vai para `deliverable_status_history`; horas em `deliverable_time_logs`.
+
+## Prazo médio vivo (onda 5)
+
+Job diário (`cron-deliverables`, 05:00) grava `category_lead_time_snapshots`: mediana de dias úteis do início à última entrega, taxa no prazo e aceite na 1ª, por categoria e modalidade. A proposta usa a mediana real quando há **5 entregas ou mais**; senão o prazo da ficha.
+
+## Resultado do cliente (onda 6)
+
+Quando todos os entregáveis não recorrentes do objetivo são aceitos, o job abre `client_result_measurements` em D+30/60/90 e avisa o comprador no dia. `improved` compara com a partida do diagnóstico no sentido da métrica.
+
+## Assertividade
+
+Por entregável: **no prazo** × **aceite na 1ª entrega** × **KPI do cliente melhorou**. Agregada por categoria e por responsável (`/admin/deliverables/performance`). O responsável vê só o próprio (`/entregas`); o comprador vê o próprio objetivo.
+
+## Rotas novas (ondas 2 a 6)
+
+| Método | Rota | Quem |
+|---|---|---|
+| `POST` | `/buyer/join-diagnostic` | Comprador no `/join` |
+| `POST` | `/client/objectives/diagnostic` · `GET /client/objectives/:id` | Comprador |
+| `POST` | `/client/proposals/:id/accept` · `/decline` | Comprador |
+| `POST` | `/client/contracted-deliverables/:id/accept` · `/return` | Comprador |
+| `POST` | `/client/objectives/:id/results` | Comprador |
+| `POST` | `/internal/diagnostics` | Servidor do site / CRM (`x-api-key`), canal `site` ou `crm` |
+| `GET` | `/internal/deliverable-catalog` | Servidor do site (`x-api-key`): só áreas ativas, sem preço |
+| `GET` | `/admin/objectives/:id` | Admin |
+| `POST` / `PUT` | `/admin/objectives/:id/proposals/suggest` · `/admin/objectives/:id/proposals` | Admin |
+| `POST` | `/admin/proposals/:id/send` | Admin |
+| `GET` / `PATCH` | `/admin/execution[/:id]` · `/admin/execution/assignees` · `/admin/execution/:id/history` | Admin |
+| `GET` / `POST` | `/admin/deliverables/performance` · `/admin/deliverables/stats/run` | Admin |
+| `GET` / `PATCH` / `POST` | `/user/assigned-deliverables[/:id][/time-logs]` · `/performance` | Responsável |
+
+Migrations (rodar em ordem no DEV): `20261118100000` (diagnóstico) → `110000` (propostas) → `120000` (execução) → `130000` (prazo médio) → `140000` (resultado) → `150000` (canal `site`).
+
+## Ondas
+
+| Onda | Entrega | Status |
+|---|---|---|
+| 1 | Catálogo (categorias + fichas) | Migration aplicada no DEV |
+| 2 | Diagnóstico com opções (app + site, mesmo payload; Typebot saiu na s367) | Codada; migration a aplicar |
+| 3 | Proposta por fases e preview | Codada; migration a aplicar |
+| 4 | Execução com responsável, histórico e horas | Codada; migration a aplicar |
+| 5 | Prazo médio vivo e painéis de assertividade | Codada; migration a aplicar |
+| 6 | Resultado do cliente (D+30/60/90) | Codada; migration a aplicar |
+| 7 | E2E, contratos na `main`, PRD, `services` → fichas, PRs em cadeia | Pendente |
